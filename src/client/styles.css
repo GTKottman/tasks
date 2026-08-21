@@ -1,6 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=Fraunces:opsz,wght@9..144,500;600;700&family=Outfit:wght@500;600&display=swap");
 :root { --ink:#26332f; --soft:#61706b; --paper:#f7f2e8; --card:#fffdf8; --card-soft:#fffaf1; --line:#ded8ca; --sage:#638579; --coral:#d56c55; --gold:#d6a847; --plum:#65536f; --wash-sage:#63857929; --wash-gold:#d6a84724; color-scheme:light; font-family:"DM Sans",sans-serif; color:var(--ink); background:var(--paper); }
 :root[data-theme="dark"] { --ink:#edf3ef; --soft:#a8b7b0; --paper:#18201e; --card:#222c29; --card-soft:#28332f; --line:#3b4843; --sage:#8fb7a9; --coral:#ed8a73; --gold:#e5bd67; --plum:#b3a0bd; --wash-sage:#6385791f; --wash-gold:#d6a84714; color-scheme:dark; }
+:root[data-style-variant="mtv-90s"] { --ink:#f7f4ff; --soft:#d6c4ff; --paper:#17052f; --card:#250a4a; --card-soft:#341460; --line:#6a3d9a; --sage:#00e7ff; --coral:#ff4fd8; --gold:#ffe566; --plum:#b76bff; --wash-sage:#00e7ff44; --wash-gold:#ffe56638; color-scheme:dark; }
 * { box-sizing:border-box; }
 html { scroll-behavior:smooth; }
 body { margin:0; min-height:100vh; background:radial-gradient(circle at 8% 4%,var(--wash-gold),transparent 24rem),radial-gradient(circle at 95% 16%,var(--wash-sage),transparent 28rem),var(--paper); transition:background-color .2s ease,color .2s ease; }
@@ -164,6 +165,31 @@ fieldset { border:1px solid var(--line); border-radius:.8rem; }
 .status-chip { flex:0 0 auto; padding:.4rem .65rem; border-radius:99px; background:color-mix(in srgb,var(--sage) 14%,var(--card)); color:var(--sage); font-size:.75rem; font-weight:600; }
 .save-toast { position:fixed; left:50%; bottom:1.5rem; z-index:6; transform:translate(-50%,1rem); padding:.65rem 1rem; border-radius:99px; background:var(--ink); color:var(--paper); font-size:.82rem; opacity:0; pointer-events:none; transition:opacity .18s ease,transform .18s ease; box-shadow:0 8px 30px #0003; }
 .save-toast.visible { opacity:1; transform:translate(-50%,0); }
+:root[data-style-variant="mtv-90s"] body { background:radial-gradient(circle at 6% 8%,#ffe56655,transparent 28rem),radial-gradient(circle at 92% 12%,#00e7ff52,transparent 24rem),radial-gradient(circle at 58% 88%,#ff4fd844,transparent 26rem),linear-gradient(130deg,#13032a,#230b4b 42%,#1a0740 68%,#2b0d57); }
+:root[data-style-variant="mtv-90s"] .eyebrow { color:var(--gold); text-shadow:0 0 .45rem #ffe56666; }
+:root[data-style-variant="mtv-90s"] .card,:root[data-style-variant="mtv-90s"] .routine,:root[data-style-variant="mtv-90s"] .year-panel,:root[data-style-variant="mtv-90s"] .settings-section { border-color:#8a55cf; border-width:2px; background:color-mix(in srgb,var(--card) 90%,#120226); box-shadow:0 16px 34px #0a001e99,0 0 0 1px #ffe56622 inset; }
+:root[data-style-variant="mtv-90s"] .pill,:root[data-style-variant="mtv-90s"] button { border-color:#8a55cf; background:linear-gradient(160deg,#3e1d72,#2a0d5d); }
+:root[data-style-variant="mtv-90s"] button:hover,:root[data-style-variant="mtv-90s"] a:hover { color:#fff8c5; }
+:root[data-style-variant="mtv-90s"] input,:root[data-style-variant="mtv-90s"] select,:root[data-style-variant="mtv-90s"] .parent-picker select { border-color:#8a55cf; background:#1c0838; color:var(--ink); }
+:root[data-style-variant="mtv-90s"] .category-heading,:root[data-style-variant="mtv-90s"] .settings-nav { background:color-mix(in srgb,var(--card) 82%,#0f0227); border-color:#8a55cf; }
+:root[data-style-variant="mtv-90s"] .category-heading button,:root[data-style-variant="mtv-90s"] .routine-heading button { border-color:#8a55cf; background:linear-gradient(145deg,#351466,#240c49); color:#fef2ff; box-shadow:0 0 0 1px #ffe5661f inset; }
+:root[data-style-variant="mtv-90s"] .section,:root[data-style-variant="mtv-90s"] .item-row,:root[data-style-variant="mtv-90s"] .section-editor { border-color:#8a55cf; background:color-mix(in srgb,var(--card-soft) 86%,#110228); }
+:root[data-style-variant="mtv-90s"] .check:hover,:root[data-style-variant="mtv-90s"] .settings-nav a:hover,:root[data-style-variant="mtv-90s"] .settings-nav a:focus-visible { background:color-mix(in srgb,var(--coral) 22%,transparent); color:var(--ink); }
+:root[data-style-variant="mtv-90s"] .check input { border-color:#d9b0ff; }
+:root[data-style-variant="mtv-90s"] .check input:checked { border-color:var(--coral); background:var(--coral); }
+:root[data-style-variant="mtv-90s"] .check.nested,:root[data-style-variant="mtv-90s"] .item-sortable.nested::before { border-color:color-mix(in srgb,var(--sage) 80%,transparent); }
+:root[data-style-variant="mtv-90s"] .routine h2::before { border-radius:20% 50% 20% 50%; box-shadow:0 0 0 .35rem #00e7ff30; }
+:root[data-style-variant="mtv-90s"] .dot.complete,:root[data-style-variant="mtv-90s"] .key i.complete { background:#00e7ff; }
+:root[data-style-variant="mtv-90s"] .dot.partial,:root[data-style-variant="mtv-90s"] .key i.partial { background:#ffe566; }
+:root[data-style-variant="mtv-90s"] .dot.low,:root[data-style-variant="mtv-90s"] .key i.low { background:#ff4fd8; }
+:root[data-style-variant="mtv-90s"] .dot.none,:root[data-style-variant="mtv-90s"] .key i.none { background:#6f5f87; }
+:root[data-style-variant="mtv-90s"] .dot.selected,:root[data-style-variant="mtv-90s"] .category-heading button:focus-visible,:root[data-style-variant="mtv-90s"] .routine-heading button:focus-visible,:root[data-style-variant="mtv-90s"] .drag-handle:focus-visible { outline-color:var(--gold); }
+:root[data-style-variant="mtv-90s"] .theme-option.selected,:root[data-style-variant="mtv-90s"] .selected-row { border-color:var(--gold); box-shadow:0 0 0 1px var(--gold),0 0 0 4px #ffe56622; background:color-mix(in srgb,var(--gold) 12%,var(--card)); }
+:root[data-style-variant="mtv-90s"] .segmented { border-color:#8a55cf; background:#190533; }
+:root[data-style-variant="mtv-90s"] .segmented button.selected { background:#33135e; box-shadow:0 0 0 1px #ffe56655 inset; }
+:root[data-style-variant="mtv-90s"] .toggle { border-color:#8a55cf; background:#442075; }
+:root[data-style-variant="mtv-90s"] .toggle.on { border-color:var(--gold); background:var(--coral); }
+:root[data-style-variant="mtv-90s"] .save-toast { background:#ffe566; color:#1f0c38; box-shadow:0 10px 35px #0009; }
 :root[data-density="compact"] main { padding-top:clamp(1.25rem,2.5vw,2.5rem); padding-bottom:clamp(1.25rem,2.5vw,2.5rem); }
 :root[data-density="compact"] .routine { padding:1rem; }
 :root[data-density="compact"] .sections { gap:.55rem; margin-top:.7rem; }
