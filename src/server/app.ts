@@ -10,6 +10,7 @@ import { Pool } from "pg";
 import { z } from "zod";
 import { prisma } from "./db";
 import { datesInYear, isScheduled, parseISODate, statusForCounts, toISODate } from "../shared/date";
+import { completionUpdates } from "../shared/taskCompletion";
 
 declare module "express-session" {
   interface SessionData {
@@ -261,6 +262,7 @@ export function createApp() {
           items: instance?.items ?? version.sections.flatMap((section) =>
             section.items.map((item) => ({
               id: item.id,
+              sourceItemId: item.id,
               label: item.label,
               completed: false,
               sectionTitle: section.title,
@@ -289,8 +291,23 @@ export function createApp() {
   }));
   app.patch("/api/items/:id", requireCsrf, asyncRoute(async (req, res) => {
     const { completed } = z.object({ completed: z.boolean() }).parse(req.body);
-    const item = await prisma.dailyItem.update({ where: { id: routeId(req) }, data: { completed, completedAt: completed ? new Date() : null } });
-    res.json(item);
+    const item = await prisma.dailyItem.findUnique({ where: { id: routeId(req) } });
+    if (!item) {
+      res.status(404).json({ error: "Checklist item not found" });
+      return;
+    }
+    const items = await prisma.dailyItem.findMany({ where: { dailyRoutineId: item.dailyRoutineId } });
+    const updates = completionUpdates(items, item.id, completed);
+    const completedAt = new Date();
+    await prisma.$transaction(
+      [...updates].map(([id, nextCompleted]) =>
+        prisma.dailyItem.update({
+          where: { id },
+          data: { completed: nextCompleted, completedAt: nextCompleted ? completedAt : null },
+        }),
+      ),
+    );
+    res.json({ updated: updates.size });
   }));
 
   app.get("/api/routines", asyncRoute(async (_req, res) => {

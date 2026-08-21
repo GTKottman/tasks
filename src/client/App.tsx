@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { completionUpdates } from "../shared/taskCompletion";
 
-type DailyItem = { id: string; label: string; completed: boolean; sectionTitle: string; sectionOrder: number; parentSourceId: string | null };
+type DailyItem = { id: string; sourceItemId: string | null; label: string; completed: boolean; sectionTitle: string; sectionOrder: number; parentSourceId: string | null };
 type DailyRoutine = { id: string; routineId: string; routineName: string; category: string; weekdays: number[]; startTime: string; endTime: string; scheduled: boolean; items: DailyItem[] };
 type Day = { date: string; status: "complete" | "partial" | "low" | "none"; completed: number; total: number };
 type EditorItem = { label: string; parentIndex?: number | null };
@@ -29,6 +30,12 @@ function groupItemsBySection(items: DailyItem[]): Array<[string, DailyItem[]]> {
     groups.set(item.sectionTitle, group);
   }
   return [...groups.entries()];
+}
+
+function Chevron({ expanded }: { expanded: boolean }) {
+  return <svg className="chevron" viewBox="0 0 20 20" aria-hidden="true">
+    <path d={expanded ? "M5.75 7.75 10 12l4.25-4.25" : "m8 5.75 4.25 4.25L8 14.25"} />
+  </svg>;
 }
 
 async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
@@ -132,12 +139,15 @@ function Dashboard() {
   const toggle = async (item: DailyItem) => {
     const completed = !item.completed;
     const routine = routines.find((entry) => entry.items.some((entryItem) => entryItem.id === item.id));
+    if (!routine) return;
+    const updates = completionUpdates(routine.items, item.id, completed);
+    const nextItems = routine.items.map((entry) => updates.has(entry.id) ? { ...entry, completed: updates.get(entry.id)! } : entry);
     const sectionItems = routine?.items.filter((entry) => entry.sectionTitle === item.sectionTitle) ?? [];
     const sectionWasComplete = sectionItems.every((entry) => entry.completed);
     const routineWasComplete = routine?.items.every((entry) => entry.completed) ?? false;
-    const sectionNowComplete = completed && sectionItems.every((entry) => entry.id === item.id || entry.completed);
-    const routineNowComplete = completed && (routine?.items.every((entry) => entry.id === item.id || entry.completed) ?? false);
-    setRoutines((all) => all.map((routine) => ({ ...routine, items: routine.items.map((entry) => entry.id === item.id ? { ...entry, completed } : entry) })));
+    const sectionNowComplete = nextItems.filter((entry) => entry.sectionTitle === item.sectionTitle).every((entry) => entry.completed);
+    const routineNowComplete = nextItems.every((entry) => entry.completed);
+    setRoutines((all) => all.map((entry) => entry.routineId === routine.routineId ? { ...entry, items: nextItems } : entry));
     play(`box-${completed ? "checked" : "unchecked"}`);
     if (routineNowComplete && !routineWasComplete) play("routine-completed");
     else if (sectionNowComplete && !sectionWasComplete) play("section-completed");
@@ -162,7 +172,7 @@ function Dashboard() {
           return <section className="routine-category" key={category}>
             <div className="category-heading">
               <h2>{category}</h2><small>{categoryRoutines.length} routine{categoryRoutines.length === 1 ? "" : "s"}</small>
-              <button type="button" aria-label={`${categoryCollapsed ? "Expand" : "Collapse"} ${category}`} aria-expanded={!categoryCollapsed} onClick={() => toggleCategory(category)}>{categoryCollapsed ? "›" : "⌄"}</button>
+              <button type="button" aria-label={`${categoryCollapsed ? "Expand" : "Collapse"} ${category}`} aria-expanded={!categoryCollapsed} onClick={() => toggleCategory(category)}><Chevron expanded={!categoryCollapsed} /></button>
             </div>
             {!categoryCollapsed && <div className="category-routines">{categoryRoutines.map((routine) => {
               const sections = groupItemsBySection(routine.items);
@@ -171,7 +181,7 @@ function Dashboard() {
                 <div className="routine-heading">
                   <h2>{routine.routineName}</h2>
                   <span>{routine.scheduled ? `${routine.startTime} to ${routine.endTime}` : `Off day · ${routine.startTime} to ${routine.endTime}`}</span>
-                  <button type="button" aria-label={`${routineCollapsed ? "Expand" : "Collapse"} ${routine.routineName}`} aria-expanded={!routineCollapsed} onClick={() => toggleRoutineCollapse(routine.routineId)}>{routineCollapsed ? "›" : "⌄"}</button>
+                  <button type="button" aria-label={`${routineCollapsed ? "Expand" : "Collapse"} ${routine.routineName}`} aria-expanded={!routineCollapsed} onClick={() => toggleRoutineCollapse(routine.routineId)}><Chevron expanded={!routineCollapsed} /></button>
                 </div>
                 {!routineCollapsed && <div className="sections">{sections.map(([title, items]) => <section className="section" key={title}><h3>{title}</h3>
                   {items.map((item) => <label className={`check ${item.parentSourceId ? "nested" : ""}`} key={item.id}><input type="checkbox" checked={item.completed} disabled={!routine.scheduled} onChange={() => routine.scheduled && void toggle(item)} /><span>{item.label}</span></label>)}
