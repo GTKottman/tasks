@@ -2,7 +2,7 @@
 :root { --ink:#26332f; --soft:#61706b; --paper:#f7f2e8; --card:#fffdf8; --line:#ded8ca; --sage:#638579; --coral:#d56c55; --gold:#d6a847; --plum:#65536f; font-family:"DM Sans",sans-serif; color:var(--ink); background:var(--paper); }
 * { box-sizing:border-box; }
 body { margin:0; min-height:100vh; background:radial-gradient(circle at 8% 4%,#d6a84724,transparent 24rem),radial-gradient(circle at 95% 16%,#63857929,transparent 28rem),var(--paper); }
-button,input { font:inherit; }
+button,input,select { font:inherit; }
 button,a { color:inherit; }
 button { cursor:pointer; }
 main { max-width:1600px; margin:auto; padding:clamp(1.5rem,4vw,4rem); }
@@ -46,13 +46,16 @@ input { min-width:0; border:1px solid var(--line); border-radius:.55rem; padding
 .sections { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:.8rem; margin-top:1rem; }
 .section { border:1px solid var(--line); border-radius:1rem; padding:.9rem; background:#fff9; }
 .section h3 { color:var(--accent); border-bottom:1px solid var(--line); padding-bottom:.6rem; font-size:.75rem; }
-.check { display:flex; grid-template-columns:auto 1fr; align-items:start; gap:.6rem; padding:.3rem; border-radius:.4rem; font-weight:400; }
+.check { position:relative; display:flex; grid-template-columns:auto 1fr; align-items:start; gap:.6rem; padding:.35rem; border-radius:.4rem; font-weight:400; }
 .check:hover { background:#63857912; }
 .check input { appearance:none; width:1.1rem; height:1.1rem; padding:0; flex:0 0 auto; border:1.5px solid #999; }
 .check input:checked { border-color:var(--accent); background:var(--accent); }
 .check input:checked::after { content:"✓"; display:block; color:white; font-size:.8rem; text-align:center; line-height:1rem; }
-.check:has(input:checked) span { color:var(--soft); text-decoration:line-through; opacity:.65; }
-.check.nested { margin-left:1.2rem; border-left:1px dashed var(--accent); border-radius:0; }
+.check:has(input:checked) .check-copy > span { color:var(--soft); text-decoration:line-through; opacity:.65; }
+.check-copy { display:grid; gap:.08rem; min-width:0; }
+.check-copy small { color:var(--soft); font-size:.68rem; font-weight:500; }
+.check.nested { margin-left:calc(var(--nest-depth) * 1.15rem); border-left:2px solid color-mix(in srgb,var(--accent) 45%,transparent); border-radius:0 .4rem .4rem 0; }
+.check.nested::before { content:""; position:absolute; left:-1px; top:.9rem; width:.55rem; border-top:2px solid color-mix(in srgb,var(--accent) 45%,transparent); transform:translateX(-100%); }
 .year-panel { position:sticky; top:1rem; padding:1.2rem; }
 .year-heading { justify-content:center; }
 .year-heading button { font-size:1.6rem; border:0; background:transparent; }
@@ -77,16 +80,32 @@ input { min-width:0; border:1px solid var(--line); border-radius:.55rem; padding
 .routine-list button { text-align:left; }
 .selected-row { border-color:var(--sage); background:#dfe9e2; }
 .editor { display:grid; gap:1rem; }
+.editor-help { max-width:62ch; margin:.35rem 0 0; color:var(--soft); font-size:.82rem; }
 .form-grid { display:grid; grid-template-columns:2fr 1.5fr repeat(3,1fr); gap:.75rem; }
 fieldset { border:1px solid var(--line); border-radius:.8rem; }
 .day { display:inline-flex; align-items:center; gap:.25rem; margin:.35rem; }
 .section-editor { padding:1rem; border:1px solid var(--line); border-radius:1rem; }
 .editor-row { margin-bottom:.55rem; }
-.editor-row > input:first-child { flex:1; }
-.item-row { padding-left:1rem; }
-.nested-box { display:flex; align-items:center; gap:.25rem; }
+.section-editor-heading > input { flex:1; }
+.section-sortable { position:relative; }
+.section-sortable.dragging,.item-sortable.dragging { z-index:3; opacity:.58; }
+.section-sortable.dragging .section-editor,.item-sortable.dragging .item-row { border-color:var(--sage); box-shadow:0 12px 30px #26332f24; background:var(--card); }
+.drag-handle { width:2.5rem; height:2.5rem; flex:0 0 auto; display:grid; align-content:center; gap:3px; padding:.55rem; color:var(--soft); cursor:grab; touch-action:manipulation; }
+.drag-handle:active { cursor:grabbing; }
+.drag-handle span { display:block; height:2px; border-radius:2px; background:currentColor; pointer-events:none; }
+.drag-handle:focus-visible { outline:2px solid var(--sage); outline-offset:2px; }
+.item-editor-list { display:grid; gap:.45rem; margin:.8rem 0; }
+.item-sortable { position:relative; }
+.item-sortable.nested { margin-left:1.75rem; }
+.item-sortable.nested::before { content:""; position:absolute; left:-.9rem; top:-.5rem; bottom:.4rem; width:.75rem; border-left:2px solid #63857966; border-bottom:2px solid #63857966; border-radius:0 0 0 .5rem; }
+.item-row { align-items:flex-start; margin:0; padding:.55rem; border:1px solid #e7e0d3; border-radius:.8rem; background:#fffaf1; }
+.item-fields { flex:1; min-width:0; display:grid; grid-template-columns:minmax(160px,1fr) minmax(170px,.65fr); gap:.5rem; align-items:end; }
+.parent-picker { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:.4rem; color:var(--soft); }
+.parent-picker select { min-width:0; width:100%; border:1px solid var(--line); border-radius:.55rem; padding:.6rem; background:white; color:var(--ink); }
+.parent-cue { grid-column:1 / -1; color:var(--sage); font-size:.72rem; font-weight:600; }
+.item-remove { flex:0 0 auto; }
 .danger { color:#9d332a; }
 .loading { min-height:100vh; display:grid; place-items:center; }
 @media (max-width:900px) { .dashboard,.manage-layout { grid-template-columns:1fr; } .year-panel,.routine-list { position:static; } }
-@media (max-width:600px) { header { align-items:flex-start; flex-direction:column; } .sections,.form-grid { grid-template-columns:1fr; } .dot-grid { grid-template-columns:repeat(14,1fr); } .editor-row { flex-wrap:wrap; } }
+@media (max-width:600px) { header { align-items:flex-start; flex-direction:column; } .sections,.form-grid,.item-fields { grid-template-columns:1fr; } .dot-grid { grid-template-columns:repeat(14,1fr); } .editor-row { flex-wrap:wrap; } .item-sortable.nested { margin-left:1rem; } .parent-picker { grid-template-columns:1fr; } .section-editor { padding:.75rem; } }
 @media (prefers-reduced-motion:reduce) { * { animation:none!important; scroll-behavior:auto!important; } }

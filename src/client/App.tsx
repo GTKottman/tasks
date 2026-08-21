@@ -1,12 +1,32 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import {
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DraggableAttributes,
+  type DraggableSyntheticListeners,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { completionUpdates } from "../shared/taskCompletion";
 
 type DailyItem = { id: string; sourceItemId: string | null; label: string; completed: boolean; sectionTitle: string; sectionOrder: number; parentSourceId: string | null };
 type DailyRoutine = { id: string; routineId: string; routineName: string; category: string; weekdays: number[]; startTime: string; endTime: string; scheduled: boolean; items: DailyItem[] };
 type Day = { date: string; status: "complete" | "partial" | "low" | "none"; completed: number; total: number };
-type EditorItem = { label: string; parentIndex?: number | null };
-type EditorSection = { title: string; items: EditorItem[] };
+type EditorItem = { editorId: string; label: string; parentId?: string | null };
+type EditorSection = { editorId: string; title: string; items: EditorItem[] };
 type EditorRoutine = { id?: string; name: string; category: string; weekdays: number[]; startTime: string; endTime: string; sortOrder: number; sections: EditorSection[]; archivedAt?: string | null };
 type ApiRoutine = { id: string; name: string; category: string; sortOrder: number; archivedAt: string | null; versions: Array<{ weekdays: number[]; startTime: string; endTime: string; sections: Array<{ title: string; items: Array<{ id: string; label: string; parentId: string | null }> }> }> };
 
@@ -30,6 +50,28 @@ function groupItemsBySection(items: DailyItem[]): Array<[string, DailyItem[]]> {
     groups.set(item.sectionTitle, group);
   }
   return [...groups.entries()];
+}
+
+function dailyItemHierarchy(items: DailyItem[]) {
+  const sourceIds = new Set(items.flatMap((item) => item.sourceItemId ? [item.sourceItemId] : []));
+  const children = new Map<string | null, DailyItem[]>();
+  for (const item of items) {
+    const parentId = item.parentSourceId && sourceIds.has(item.parentSourceId) ? item.parentSourceId : null;
+    children.set(parentId, [...(children.get(parentId) ?? []), item]);
+  }
+  const rows: Array<{ item: DailyItem; depth: number; parentLabel: string | null }> = [];
+  const visited = new Set<string>();
+  const append = (item: DailyItem, depth: number, parentLabel: string | null) => {
+    if (visited.has(item.id)) return;
+    visited.add(item.id);
+    rows.push({ item, depth, parentLabel });
+    if (item.sourceItemId) {
+      for (const child of children.get(item.sourceItemId) ?? []) append(child, depth + 1, item.label);
+    }
+  };
+  for (const item of children.get(null) ?? []) append(item, 0, null);
+  for (const item of items) append(item, 0, null);
+  return rows;
 }
 
 function Chevron({ expanded }: { expanded: boolean }) {
@@ -161,7 +203,7 @@ function Dashboard() {
     groupedRoutines.set(routine.category, group);
   }
   return <main>
-    <header><div><p className="eyebrow">A gentle rhythm for</p><h1>Daily Routines</h1></div><nav><Link to="/manage">Manage</Link><button className="pill" onClick={() => { const next = !sound; setSound(next); localStorage.setItem("routine-sound", next ? "on" : "off"); }}>{sound ? "Sounds on" : "Sounds off"}</button></nav></header>
+    <header><div><p className="eyebrow">A gentle rhythm for</p><h1>Daily Routines</h1></div><nav><Link to="/manage">Edit routines</Link><button className="pill" onClick={() => { const next = !sound; setSound(next); localStorage.setItem("routine-sound", next ? "on" : "off"); }}>{sound ? "Sounds on" : "Sounds off"}</button></nav></header>
     <div className="date-row"><label>Day<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label><button className="pill" onClick={() => setDate(localToday())}>Today</button></div>
     {error && <p className="error" role="alert">{error}</p>}
     <div className="dashboard">
@@ -184,7 +226,7 @@ function Dashboard() {
                   <button type="button" aria-label={`${routineCollapsed ? "Expand" : "Collapse"} ${routine.routineName}`} aria-expanded={!routineCollapsed} onClick={() => toggleRoutineCollapse(routine.routineId)}><Chevron expanded={!routineCollapsed} /></button>
                 </div>
                 {!routineCollapsed && <div className="sections">{sections.map(([title, items]) => <section className="section" key={title}><h3>{title}</h3>
-                  {items.map((item) => <label className={`check ${item.parentSourceId ? "nested" : ""}`} key={item.id}><input type="checkbox" checked={item.completed} disabled={!routine.scheduled} onChange={() => routine.scheduled && void toggle(item)} /><span>{item.label}</span></label>)}
+                  {dailyItemHierarchy(items).map(({ item, depth, parentLabel }) => <label className={`check ${depth ? "nested" : ""}`} style={{ "--nest-depth": depth } as CSSProperties} key={item.id}><input type="checkbox" checked={item.completed} disabled={!routine.scheduled} onChange={() => routine.scheduled && void toggle(item)} /><span className="check-copy"><span>{item.label}</span>{parentLabel && <small>Under: {parentLabel}</small>}</span></label>)}
                 </section>)}</div>}
               </article>;
             })}</div>}
@@ -199,44 +241,136 @@ function Dashboard() {
   </main>;
 }
 
-const blankRoutine = (): EditorRoutine => ({ name: "", category: "Uncategorized", weekdays: [1, 2, 3, 4, 5], startTime: "08:00", endTime: "09:00", sortOrder: 0, sections: [{ title: "", items: [{ label: "" }] }] });
-function move<T>(items: T[], index: number, direction: -1 | 1) {
-  const target = index + direction;
-  if (target < 0 || target >= items.length) return items;
-  const copy = [...items]; [copy[index], copy[target]] = [copy[target], copy[index]]; return copy;
+const editorId = () => crypto.randomUUID();
+const blankItem = (): EditorItem => ({ editorId: editorId(), label: "", parentId: null });
+const blankSection = (): EditorSection => ({ editorId: editorId(), title: "", items: [blankItem()] });
+const blankRoutine = (): EditorRoutine => ({ name: "", category: "Uncategorized", weekdays: [1, 2, 3, 4, 5], startTime: "08:00", endTime: "09:00", sortOrder: 0, sections: [blankSection()] });
+
+function flattenEditorItems(items: EditorItem[]): EditorItem[] {
+  const ids = new Set(items.map((item) => item.editorId));
+  const children = new Map<string | null, EditorItem[]>();
+  for (const item of items) {
+    const parentId = item.parentId && ids.has(item.parentId) && item.parentId !== item.editorId ? item.parentId : null;
+    children.set(parentId, [...(children.get(parentId) ?? []), { ...item, parentId }]);
+  }
+  const result: EditorItem[] = [];
+  const visited = new Set<string>();
+  const append = (item: EditorItem) => {
+    if (visited.has(item.editorId)) return;
+    visited.add(item.editorId);
+    result.push(item);
+    for (const child of children.get(item.editorId) ?? []) append(child);
+  };
+  for (const item of children.get(null) ?? []) append(item);
+  for (const item of items) append({ ...item, parentId: null });
+  return result;
 }
-function reindexEditorItems(previous: EditorItem[], next: EditorItem[]): EditorItem[] {
-  return next.map((item, itemIndex) => {
-    const oldIndex = previous.indexOf(item);
-    const oldParentIndex = oldIndex >= 0 ? previous[oldIndex].parentIndex : null;
-    const parent = oldParentIndex == null ? undefined : previous[oldParentIndex];
-    const parentIndex = parent ? next.indexOf(parent) : -1;
-    return { ...item, parentIndex: parentIndex >= 0 && parentIndex < itemIndex ? parentIndex : null };
-  });
+
+function reorderEditorItems(items: EditorItem[], activeId: string, overId: string) {
+  const active = items.find((item) => item.editorId === activeId);
+  let over = items.find((item) => item.editorId === overId);
+  if (!active || !over) return items;
+  while ((over.parentId ?? null) !== (active.parentId ?? null) && over.parentId) {
+    over = items.find((item) => item.editorId === over!.parentId);
+    if (!over) return items;
+  }
+  if ((active.parentId ?? null) !== (over.parentId ?? null) || active.editorId === over.editorId) return items;
+  const siblings = items.filter((item) => (item.parentId ?? null) === (active.parentId ?? null));
+  const reordered = arrayMove(siblings, siblings.indexOf(active), siblings.indexOf(over));
+  let siblingIndex = 0;
+  const next = items.map((item) => (item.parentId ?? null) === (active.parentId ?? null) ? reordered[siblingIndex++] : item);
+  return flattenEditorItems(next);
+}
+
+function descendantIds(items: EditorItem[], itemId: string) {
+  const descendants = new Set<string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const item of items) {
+      if (item.parentId === itemId || (item.parentId && descendants.has(item.parentId))) {
+        if (!descendants.has(item.editorId)) { descendants.add(item.editorId); changed = true; }
+      }
+    }
+  }
+  return descendants;
+}
+
+function DragHandle({ label, attributes, listeners }: { label: string; attributes: DraggableAttributes; listeners?: DraggableSyntheticListeners }) {
+  return <button className="drag-handle" type="button" aria-label={label} {...attributes} {...listeners}><span /><span /><span /></button>;
+}
+
+function SortableEditorRow({ id, label, children, className = "" }: { id: string; label: string; children: (handle: ReactNode) => ReactNode; className?: string }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition } as CSSProperties;
+  const handle = <DragHandle label={label} attributes={attributes} listeners={listeners} />;
+  return <div ref={setNodeRef} style={style} className={`${className} ${isDragging ? "dragging" : ""}`}>{children(handle)}</div>;
 }
 
 function Manage() {
   const [routines, setRoutines] = useState<EditorRoutine[]>([]);
   const [draft, setDraft] = useState<EditorRoutine>(blankRoutine);
   const [message, setMessage] = useState("");
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   const load = async () => {
     const data = await api<ApiRoutine[]>("/api/routines");
     setRoutines(data.map((routine) => {
       const version = routine.versions[0];
       return { id: routine.id, name: routine.name, category: routine.category, sortOrder: routine.sortOrder, archivedAt: routine.archivedAt, weekdays: version?.weekdays ?? [], startTime: version?.startTime ?? "08:00", endTime: version?.endTime ?? "09:00", sections: version?.sections.map((section) => {
-        const indexById = new Map(section.items.map((item, index) => [item.id, index]));
-        return { title: section.title, items: section.items.map((item) => ({ label: item.label, parentIndex: item.parentId ? indexById.get(item.parentId) : null })) };
+        const editorIdsByApiId = new Map(section.items.map((item) => [item.id, editorId()]));
+        return {
+          editorId: editorId(),
+          title: section.title,
+          items: flattenEditorItems(section.items.map((item) => ({
+            editorId: editorIdsByApiId.get(item.id)!,
+            label: item.label,
+            parentId: item.parentId ? editorIdsByApiId.get(item.parentId) ?? null : null,
+          }))),
+        };
       }) ?? [] };
     }));
   };
   useEffect(() => { void load(); }, []);
   const changeSection = (index: number, section: EditorSection) => setDraft({ ...draft, sections: draft.sections.map((entry, i) => i === index ? section : entry) });
+  const dropSection = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const oldIndex = draft.sections.findIndex((section) => section.editorId === active.id);
+    const newIndex = draft.sections.findIndex((section) => section.editorId === over.id);
+    if (oldIndex >= 0 && newIndex >= 0) setDraft({ ...draft, sections: arrayMove(draft.sections, oldIndex, newIndex) });
+  };
+  const dropItem = (sectionIndex: number, { active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const section = draft.sections[sectionIndex];
+    changeSection(sectionIndex, { ...section, items: reorderEditorItems(section.items, String(active.id), String(over.id)) });
+  };
   const save = async (event: FormEvent) => {
     event.preventDefault();
     try {
+      const payload = {
+        name: draft.name,
+        category: draft.category,
+        weekdays: draft.weekdays,
+        startTime: draft.startTime,
+        endTime: draft.endTime,
+        sortOrder: draft.sortOrder,
+        archivedAt: draft.archivedAt,
+        clientDate: localToday(),
+        confirmReplace: Boolean(draft.id),
+        sections: draft.sections.map((section) => ({
+          title: section.title,
+          items: section.items.map((item) => ({
+            label: item.label,
+            parentIndex: item.parentId ? section.items.findIndex((candidate) => candidate.editorId === item.parentId) : null,
+          })),
+        })),
+      };
       await api(draft.id ? `/api/routines/${draft.id}` : "/api/routines", {
         method: draft.id ? "PUT" : "POST",
-        body: JSON.stringify({ ...draft, clientDate: localToday(), confirmReplace: Boolean(draft.id) }),
+        body: JSON.stringify(payload),
       });
       setMessage("Routine saved."); setDraft(blankRoutine()); await load();
     } catch (reason) { setMessage((reason as Error).message); }
@@ -245,16 +379,35 @@ function Manage() {
     if (!confirm("Archive this routine? Existing daily history will remain available.")) return;
     await api(`/api/routines/${id}`, { method: "DELETE", body: JSON.stringify({ confirm: true, clientDate: localToday() }) }); await load(); setDraft(blankRoutine());
   };
-  return <main><header><div><p className="eyebrow">Shape your days</p><h1>Manage</h1></div><nav><Link to="/">Dashboard</Link></nav></header>
+  return <main><header><div><p className="eyebrow">Shape your days</p><h1>Edit routines</h1></div><nav><Link to="/">Dashboard</Link></nav></header>
     <div className="manage-layout"><aside className="card routine-list"><button onClick={() => setDraft(blankRoutine())}>+ New routine</button>{routines.map((routine) => <button className={draft.id === routine.id ? "selected-row" : ""} key={routine.id} onClick={() => setDraft(structuredClone(routine))}>{routine.name}{routine.archivedAt ? " (archived)" : ""}</button>)}</aside>
-      <form className="card editor" onSubmit={save}><h2>{draft.id ? "Edit routine" : "New routine"}</h2>
+      <form className="card editor" onSubmit={save}><div><h2>{draft.id ? "Edit routine" : "New routine"}</h2><p className="editor-help">Drag the three-line handles to rearrange sections and tasks. On touch screens, press and hold the handle first.</p></div>
         <div className="form-grid"><label>Name<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} required /></label><label>Category<input value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} required /></label><label>Start<input type="time" value={draft.startTime} onChange={(e) => setDraft({ ...draft, startTime: e.target.value })} required /></label><label>End<input type="time" value={draft.endTime} onChange={(e) => setDraft({ ...draft, endTime: e.target.value })} required /></label><label>Display order<input type="number" min="0" value={draft.sortOrder} onChange={(e) => setDraft({ ...draft, sortOrder: Number(e.target.value) })} required /></label></div>
         <fieldset><legend>Scheduled days</legend>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => <label className="day" key={day}><input type="checkbox" checked={draft.weekdays.includes(index)} onChange={() => setDraft({ ...draft, weekdays: draft.weekdays.includes(index) ? draft.weekdays.filter((value) => value !== index) : [...draft.weekdays, index] })} />{day}</label>)}</fieldset>
-        {draft.sections.map((section, sectionIndex) => <section className="section-editor" key={sectionIndex}><div className="editor-row"><input aria-label="Section title" placeholder="Section title" value={section.title} onChange={(e) => changeSection(sectionIndex, { ...section, title: e.target.value })} required /><button type="button" onClick={() => setDraft({ ...draft, sections: move(draft.sections, sectionIndex, -1) })}>↑</button><button type="button" onClick={() => setDraft({ ...draft, sections: move(draft.sections, sectionIndex, 1) })}>↓</button><button className="danger" type="button" onClick={() => confirm("Remove this section and its items?") && setDraft({ ...draft, sections: draft.sections.filter((_, i) => i !== sectionIndex) })}>Remove</button></div>
-          {section.items.map((item, itemIndex) => <div className="editor-row item-row" key={itemIndex}><input aria-label="Item label" placeholder="Checklist item" value={item.label} onChange={(e) => changeSection(sectionIndex, { ...section, items: section.items.map((entry, i) => i === itemIndex ? { ...entry, label: e.target.value } : entry) })} required /><label className="nested-box"><input type="checkbox" checked={item.parentIndex != null} disabled={itemIndex === 0} onChange={(e) => changeSection(sectionIndex, { ...section, items: section.items.map((entry, i) => i === itemIndex ? { ...entry, parentIndex: e.target.checked ? itemIndex - 1 : null } : entry) })} />Nested</label><button type="button" onClick={() => changeSection(sectionIndex, { ...section, items: reindexEditorItems(section.items, move(section.items, itemIndex, -1)) })}>↑</button><button type="button" onClick={() => changeSection(sectionIndex, { ...section, items: reindexEditorItems(section.items, move(section.items, itemIndex, 1)) })}>↓</button><button className="danger" type="button" onClick={() => confirm("Remove this checklist item?") && changeSection(sectionIndex, { ...section, items: reindexEditorItems(section.items, section.items.filter((_, i) => i !== itemIndex)) })}>×</button></div>)}
-          <button type="button" onClick={() => changeSection(sectionIndex, { ...section, items: [...section.items, { label: "" }] })}>+ Add item</button>
-        </section>)}
-        <button type="button" onClick={() => setDraft({ ...draft, sections: [...draft.sections, { title: "", items: [{ label: "" }] }] })}>+ Add section</button>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={dropSection}>
+          <SortableContext items={draft.sections.map((section) => section.editorId)} strategy={verticalListSortingStrategy}>
+            {draft.sections.map((section, sectionIndex) => <SortableEditorRow id={section.editorId} label={`Drag to reorder ${section.title || "section"}`} className="section-sortable" key={section.editorId}>{(sectionHandle) =>
+              <section className="section-editor"><div className="editor-row section-editor-heading">{sectionHandle}<input aria-label="Section title" placeholder="Section title" value={section.title} onChange={(e) => changeSection(sectionIndex, { ...section, title: e.target.value })} required /><button className="danger" type="button" onClick={() => confirm("Remove this section and its items?") && setDraft({ ...draft, sections: draft.sections.filter((_, i) => i !== sectionIndex) })}>Remove</button></div>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(event) => dropItem(sectionIndex, event)}>
+                  <SortableContext items={section.items.map((item) => item.editorId)} strategy={verticalListSortingStrategy}>
+                    <div className="item-editor-list">{section.items.map((item, itemIndex) => {
+                      const parent = section.items.find((candidate) => candidate.editorId === item.parentId);
+                      const excludedParents = descendantIds(section.items, item.editorId);
+                      return <SortableEditorRow id={item.editorId} label={`Drag to reorder ${item.label || "task"}`} className={`item-sortable ${parent ? "nested" : ""}`} key={item.editorId}>{(itemHandle) =>
+                        <div className="editor-row item-row">{itemHandle}<div className="item-fields"><input aria-label="Item label" placeholder="Checklist item" value={item.label} onChange={(e) => changeSection(sectionIndex, { ...section, items: section.items.map((entry, i) => i === itemIndex ? { ...entry, label: e.target.value } : entry) })} required /><label className="parent-picker"><span>Parent</span><select aria-label={`Parent task for ${item.label || "task"}`} value={item.parentId ?? ""} onChange={(e) => {
+                          const parentId = e.target.value || null;
+                          changeSection(sectionIndex, { ...section, items: flattenEditorItems(section.items.map((entry) => entry.editorId === item.editorId ? { ...entry, parentId } : entry)) });
+                        }}><option value="">Top-level task</option>{section.items.filter((candidate) => candidate.editorId !== item.editorId && (!candidate.parentId || candidate.editorId === item.parentId) && !excludedParents.has(candidate.editorId)).map((candidate) => <option key={candidate.editorId} value={candidate.editorId}>{candidate.label || "Untitled task"}</option>)}</select></label>{parent && <small className="parent-cue">Under: {parent.label || "Untitled task"}</small>}</div><button className="danger item-remove" type="button" aria-label={`Remove ${item.label || "checklist item"}`} onClick={() => confirm("Remove this checklist item?") && changeSection(sectionIndex, { ...section, items: flattenEditorItems(section.items.filter((_, i) => i !== itemIndex)) })}>×</button></div>
+                      }</SortableEditorRow>;
+                    })}</div>
+                  </SortableContext>
+                </DndContext>
+                <button type="button" onClick={() => changeSection(sectionIndex, { ...section, items: [...section.items, blankItem()] })}>+ Add item</button>
+              </section>
+            }</SortableEditorRow>)}
+          </SortableContext>
+        </DndContext>
+        <button type="button" onClick={() => setDraft({ ...draft, sections: [...draft.sections, blankSection()] })}>+ Add section</button>
         <div className="actions"><button type="submit">{draft.archivedAt ? "Restore and save" : "Save routine"}</button>{draft.id && !draft.archivedAt && <button className="danger" type="button" onClick={() => void archive(draft.id!)}>Archive routine</button>}</div>{message && <p role="status">{message}</p>}
       </form></div>
   </main>;

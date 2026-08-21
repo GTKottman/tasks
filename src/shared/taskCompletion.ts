@@ -34,17 +34,31 @@ export function completionUpdates<T extends CompletableItem>(
       setDescendants(child, value, visited);
     }
   };
-  setDescendants(target, completed, new Set());
+  if (!target.parentSourceId) {
+    setDescendants(target, completed, new Set());
+  } else {
+    completedById.set(target.id, completed);
 
-  let parentSourceId = target.parentSourceId;
-  const visitedParents = new Set<string>();
-  while (parentSourceId && !visitedParents.has(parentSourceId)) {
-    visitedParents.add(parentSourceId);
-    const parent = itemBySourceId.get(parentSourceId);
-    if (!parent) break;
-    const children = childrenByParentSourceId.get(parentSourceId) ?? [];
-    completedById.set(parent.id, children.length > 0 && children.every((child) => completedById.get(child.id)));
-    parentSourceId = parent.parentSourceId;
+    let parent = itemBySourceId.get(target.parentSourceId);
+    const visitedParents = new Set<string>();
+    while (parent?.parentSourceId && !visitedParents.has(parent.id)) {
+      visitedParents.add(parent.id);
+      parent = itemBySourceId.get(parent.parentSourceId);
+    }
+
+    if (parent?.sourceItemId) {
+      const descendants: T[] = [];
+      const collectDescendants = (sourceId: string, visited: Set<string>) => {
+        if (visited.has(sourceId)) return;
+        visited.add(sourceId);
+        for (const child of childrenByParentSourceId.get(sourceId) ?? []) {
+          descendants.push(child);
+          if (child.sourceItemId) collectDescendants(child.sourceItemId, visited);
+        }
+      };
+      collectDescendants(parent.sourceItemId, new Set());
+      completedById.set(parent.id, descendants.length > 0 && descendants.every((item) => completedById.get(item.id)));
+    }
   }
 
   return new Map(
