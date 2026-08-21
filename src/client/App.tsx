@@ -32,6 +32,52 @@ type ApiRoutine = { id: string; name: string; category: string; sortOrder: numbe
 
 const SOUND_NAMES = ["box-checked", "box-unchecked", "section-completed", "routine-completed"] as const;
 const audioCache = new Map<string, HTMLAudioElement>();
+type ThemePreference = "system" | "light" | "dark";
+type DensityPreference = "comfortable" | "compact";
+type AppSettings = {
+  theme: ThemePreference;
+  sounds: boolean;
+  density: DensityPreference;
+  reduceMotion: boolean;
+};
+
+const SETTINGS_KEY = "daily-routines-settings";
+const SETTINGS_EVENT = "daily-routines-settings-changed";
+const defaultSettings: AppSettings = {
+  theme: "system",
+  sounds: true,
+  density: "comfortable",
+  reduceMotion: false,
+};
+
+function readSettings(): AppSettings {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}") as Partial<AppSettings>;
+    return {
+      ...defaultSettings,
+      ...saved,
+      sounds: saved.sounds ?? localStorage.getItem("routine-sound") !== "off",
+    };
+  } catch {
+    return defaultSettings;
+  }
+}
+
+function applySettings(settings: AppSettings) {
+  const isDark = settings.theme === "dark"
+    || (settings.theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.dataset.theme = isDark ? "dark" : "light";
+  document.documentElement.dataset.density = settings.density;
+  document.documentElement.dataset.reduceMotion = String(settings.reduceMotion);
+}
+
+function saveSettings(settings: AppSettings) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  localStorage.setItem("routine-sound", settings.sounds ? "on" : "off");
+  applySettings(settings);
+  window.dispatchEvent(new CustomEvent<AppSettings>(SETTINGS_EVENT, { detail: settings }));
+}
+
 function getSound(name: string) {
   const cached = audioCache.get(name);
   if (cached) return cached;
@@ -119,7 +165,7 @@ function Dashboard() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [routines, setRoutines] = useState<DailyRoutine[]>([]);
   const [days, setDays] = useState<Day[]>([]);
-  const [sound, setSound] = useState(localStorage.getItem("routine-sound") !== "off");
+  const [sound, setSound] = useState(() => readSettings().sounds);
   const [error, setError] = useState("");
   const [, setClock] = useState(0);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(() => {
@@ -140,6 +186,11 @@ function Dashboard() {
   useEffect(() => {
     const timer = window.setInterval(() => setClock((value) => value + 1), 30_000);
     return () => window.clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    const updateSound = (event: Event) => setSound((event as CustomEvent<AppSettings>).detail.sounds);
+    window.addEventListener(SETTINGS_EVENT, updateSound);
+    return () => window.removeEventListener(SETTINGS_EVENT, updateSound);
   }, []);
   useEffect(() => {
     let secondFrame = 0;
@@ -203,7 +254,7 @@ function Dashboard() {
     groupedRoutines.set(routine.category, group);
   }
   return <main>
-    <header><div><p className="eyebrow">A gentle rhythm for</p><h1>Daily Routines</h1></div><nav><Link to="/manage">Edit routines</Link><button className="pill" onClick={() => { const next = !sound; setSound(next); localStorage.setItem("routine-sound", next ? "on" : "off"); }}>{sound ? "Sounds on" : "Sounds off"}</button></nav></header>
+    <header><div><p className="eyebrow">A gentle rhythm for</p><h1>Daily Routines</h1></div><nav><Link to="/manage">Edit routines</Link><Link to="/settings">Settings</Link><button className="pill" onClick={() => { const settings = readSettings(); saveSettings({ ...settings, sounds: !sound }); }}>{sound ? "Sounds on" : "Sounds off"}</button></nav></header>
     <div className="date-row"><label>Day<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label><button className="pill" onClick={() => setDate(localToday())}>Today</button></div>
     {error && <p className="error" role="alert">{error}</p>}
     <div className="dashboard">
@@ -379,7 +430,7 @@ function Manage() {
     if (!confirm("Archive this routine? Existing daily history will remain available.")) return;
     await api(`/api/routines/${id}`, { method: "DELETE", body: JSON.stringify({ confirm: true, clientDate: localToday() }) }); await load(); setDraft(blankRoutine());
   };
-  return <main><header><div><p className="eyebrow">Shape your days</p><h1>Edit routines</h1></div><nav><Link to="/">Dashboard</Link></nav></header>
+  return <main><header><div><p className="eyebrow">Shape your days</p><h1>Edit routines</h1></div><nav><Link to="/">Dashboard</Link><Link to="/settings">Settings</Link></nav></header>
     <div className="manage-layout"><aside className="card routine-list"><button onClick={() => setDraft(blankRoutine())}>+ New routine</button>{routines.map((routine) => <button className={draft.id === routine.id ? "selected-row" : ""} key={routine.id} onClick={() => setDraft(structuredClone(routine))}>{routine.name}{routine.archivedAt ? " (archived)" : ""}</button>)}</aside>
       <form className="card editor" onSubmit={save}><div><h2>{draft.id ? "Edit routine" : "New routine"}</h2><p className="editor-help">Drag the three-line handles to rearrange sections and tasks. On touch screens, press and hold the handle first.</p></div>
         <div className="form-grid"><label>Name<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} required /></label><label>Category<input value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} required /></label><label>Start<input type="time" value={draft.startTime} onChange={(e) => setDraft({ ...draft, startTime: e.target.value })} required /></label><label>End<input type="time" value={draft.endTime} onChange={(e) => setDraft({ ...draft, endTime: e.target.value })} required /></label><label>Display order<input type="number" min="0" value={draft.sortOrder} onChange={(e) => setDraft({ ...draft, sortOrder: Number(e.target.value) })} required /></label></div>
@@ -413,11 +464,90 @@ function Manage() {
   </main>;
 }
 
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (checked: boolean) => void; label: string }) {
+  return <button className={`toggle ${checked ? "on" : ""}`} type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}>
+    <span />
+  </button>;
+}
+
+function Settings() {
+  const [settings, setSettings] = useState(readSettings);
+  const [saved, setSaved] = useState(false);
+
+  const update = <Key extends keyof AppSettings>(key: Key, value: AppSettings[Key]) => {
+    const next = { ...settings, [key]: value };
+    setSettings(next);
+    saveSettings(next);
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 1800);
+  };
+
+  const themes: Array<{ value: ThemePreference; title: string; description: string }> = [
+    { value: "system", title: "System", description: "Match this device" },
+    { value: "light", title: "Light", description: "Warm and bright" },
+    { value: "dark", title: "Dark", description: "Soft on the eyes" },
+  ];
+
+  return <main className="settings-page">
+    <header><div><p className="eyebrow">Make it yours</p><h1>Settings</h1><p className="settings-intro">Tune Daily Routines to feel right for you. Changes are saved automatically on this device.</p></div><nav><Link to="/">Dashboard</Link><Link to="/manage">Edit routines</Link></nav></header>
+    <div className="settings-layout">
+      <aside className="settings-nav" aria-label="Settings sections">
+        <a href="#appearance">Appearance</a>
+        <a href="#preferences">Preferences</a>
+        <a href="#about">About</a>
+      </aside>
+      <div className="settings-content">
+        <section className="settings-section" id="appearance">
+          <div className="settings-section-heading"><div className="settings-icon" aria-hidden="true">◐</div><div><h2>Appearance</h2><p>Choose how your routines look and feel.</p></div></div>
+          <div className="setting-block">
+            <div><h3>Color theme</h3><p>Select a theme or follow your device setting.</p></div>
+            <div className="theme-options">
+              {themes.map((theme) => <button type="button" className={`theme-option ${settings.theme === theme.value ? "selected" : ""}`} aria-pressed={settings.theme === theme.value} key={theme.value} onClick={() => update("theme", theme.value)}>
+                <span className={`theme-preview ${theme.value}`}><i /><i /><i /></span>
+                <strong>{theme.title}</strong><small>{theme.description}</small>
+              </button>)}
+            </div>
+          </div>
+          <div className="setting-row">
+            <div><h3>Display density</h3><p>Adjust the spacing between cards and controls.</p></div>
+            <div className="segmented" aria-label="Display density">
+              {(["comfortable", "compact"] as DensityPreference[]).map((density) => <button type="button" className={settings.density === density ? "selected" : ""} aria-pressed={settings.density === density} key={density} onClick={() => update("density", density)}>{density[0].toUpperCase() + density.slice(1)}</button>)}
+            </div>
+          </div>
+        </section>
+
+        <section className="settings-section" id="preferences">
+          <div className="settings-section-heading"><div className="settings-icon" aria-hidden="true">◎</div><div><h2>Preferences</h2><p>Control feedback and movement across the app.</p></div></div>
+          <div className="setting-row"><div><h3>Completion sounds</h3><p>Play gentle feedback when you check off tasks and routines.</p></div><Toggle label="Completion sounds" checked={settings.sounds} onChange={(value) => update("sounds", value)} /></div>
+          <div className="setting-row"><div><h3>Reduce motion</h3><p>Turn off pulsing indicators and interface animations.</p></div><Toggle label="Reduce motion" checked={settings.reduceMotion} onChange={(value) => update("reduceMotion", value)} /></div>
+        </section>
+
+        <section className="settings-section about-section" id="about">
+          <div className="settings-section-heading"><div className="settings-icon" aria-hidden="true">♡</div><div><h2>About</h2><p>Daily Routines helps you build a gentler rhythm, one small check at a time.</p></div></div>
+          <div className="setting-row"><div><h3>Settings storage</h3><p>Your preferences stay private in this browser.</p></div><span className="status-chip">Stored locally</span></div>
+        </section>
+      </div>
+    </div>
+    <div className={`save-toast ${saved ? "visible" : ""}`} role="status" aria-live="polite">Settings saved</div>
+  </main>;
+}
+
 export function App() {
   const [ready, setReady] = useState(false); const [authenticated, setAuthenticated] = useState(false); const navigate = useNavigate();
+  useEffect(() => {
+    const settings = readSettings();
+    applySettings(settings);
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const syncSystemTheme = () => {
+      const current = readSettings();
+      if (current.theme === "system") applySettings(current);
+    };
+    media.addEventListener("change", syncSystemTheme);
+    return () => media.removeEventListener("change", syncSystemTheme);
+  }, []);
   useEffect(() => { api<{ authenticated: boolean; csrfToken: string }>("/api/auth/status").then((result) => { csrfToken = result.csrfToken; setAuthenticated(result.authenticated); setReady(true); }).catch(() => setReady(true)); }, []);
   const logout = async () => { await api("/api/auth/logout", { method: "POST" }); setAuthenticated(false); navigate("/"); };
   if (!ready) return <div className="loading">Loading…</div>;
   if (!authenticated) return <Login onLogin={() => setAuthenticated(true)} />;
-  return <><button className="logout" onClick={() => void logout()}>Sign out</button><Routes><Route path="/" element={<Dashboard />} /><Route path="/manage" element={<Manage />} /><Route path="*" element={<Navigate to="/" />} /></Routes></>;
+  return <><button className="logout" onClick={() => void logout()}>Sign out</button><Routes><Route path="/" element={<Dashboard />} /><Route path="/manage" element={<Manage />} /><Route path="/settings" element={<Settings />} /><Route path="*" element={<Navigate to="/" />} /></Routes></>;
 }
