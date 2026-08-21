@@ -32,6 +32,18 @@ export function statusForCounts(completed: number, total: number): DayStatus {
   return percentage >= 50 ? "partial" : "low";
 }
 
+export function scoredItemCounts(
+  routines: Array<{ isOptional: boolean; items: Array<{ completed: boolean }> }>,
+): { completed: number; total: number } {
+  const items = routines
+    .filter((routine) => !routine.isOptional)
+    .flatMap((routine) => routine.items);
+  return {
+    completed: items.filter((item) => item.completed).length,
+    total: items.length,
+  };
+}
+
 export function isScheduled(weekdays: number[], date: Date): boolean {
   return weekdays.includes(date.getUTCDay());
 }

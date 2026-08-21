@@ -23,12 +23,12 @@ import { CSS } from "@dnd-kit/utilities";
 import { completionUpdates } from "../shared/taskCompletion";
 
 type DailyItem = { id: string; sourceItemId: string | null; label: string; completed: boolean; sectionTitle: string; sectionOrder: number; parentSourceId: string | null };
-type DailyRoutine = { id: string; routineId: string; routineName: string; category: string; weekdays: number[]; startTime: string; endTime: string; scheduled: boolean; items: DailyItem[] };
+type DailyRoutine = { id: string; routineId: string; routineName: string; category: string; isOptional: boolean; weekdays: number[]; startTime: string; endTime: string; scheduled: boolean; items: DailyItem[] };
 type Day = { date: string; status: "complete" | "partial" | "low" | "none"; completed: number; total: number };
 type EditorItem = { editorId: string; label: string; parentId?: string | null };
 type EditorSection = { editorId: string; title: string; items: EditorItem[] };
-type EditorRoutine = { id?: string; name: string; category: string; weekdays: number[]; startTime: string; endTime: string; sortOrder: number; sections: EditorSection[]; archivedAt?: string | null };
-type ApiRoutine = { id: string; name: string; category: string; sortOrder: number; archivedAt: string | null; versions: Array<{ weekdays: number[]; startTime: string; endTime: string; sections: Array<{ title: string; items: Array<{ id: string; label: string; parentId: string | null }> }> }> };
+type EditorRoutine = { id?: string; name: string; category: string; isOptional: boolean; weekdays: number[]; startTime: string; endTime: string; sortOrder: number; sections: EditorSection[]; archivedAt?: string | null };
+type ApiRoutine = { id: string; name: string; category: string; sortOrder: number; archivedAt: string | null; versions: Array<{ isOptional: boolean; weekdays: number[]; startTime: string; endTime: string; sections: Array<{ title: string; items: Array<{ id: string; label: string; parentId: string | null }> }> }> };
 
 const SOUND_NAMES = ["box-checked", "box-unchecked", "section-completed", "routine-completed"] as const;
 const audioCache = new Map<string, HTMLAudioElement>();
@@ -210,7 +210,7 @@ function Dashboard() {
     const toMinutes = (time: string) => time.split(":").map(Number).reduce((h, m) => h * 60 + m);
     const start = toMinutes(routine.startTime); const end = toMinutes(routine.endTime);
     const inTimeRange = end === start ? false : end > start ? minutes >= start && minutes < end : minutes >= start || minutes < end;
-    return routine.weekdays.includes(now.getDay()) && inTimeRange;
+    return (routine.isOptional || routine.weekdays.includes(now.getDay())) && inTimeRange;
   };
   const toggleCategory = (category: string) => setCollapsedCategories((current) => {
     const next = new Set(current);
@@ -270,10 +270,11 @@ function Dashboard() {
             {!categoryCollapsed && <div className="category-routines">{categoryRoutines.map((routine) => {
               const sections = groupItemsBySection(routine.items);
               const routineCollapsed = collapsedRoutines.has(routine.routineId);
-              return <article className={`routine ${active(routine) ? "active" : ""} ${routine.scheduled ? "" : "off-day"}`} key={routine.routineId}>
+              return <article className={`routine ${active(routine) ? "active" : ""} ${routine.scheduled ? "" : "off-day"} ${routine.isOptional ? "optional" : ""}`} key={routine.routineId}>
                 <div className="routine-heading">
                   <h2>{routine.routineName}</h2>
-                  <span>{routine.scheduled ? `${routine.startTime} to ${routine.endTime}` : `Off day · ${routine.startTime} to ${routine.endTime}`}</span>
+                  {routine.isOptional && <span className="optional-badge">Optional</span>}
+                  <span>{routine.isOptional ? `Any day · ${routine.startTime} to ${routine.endTime}` : routine.scheduled ? `${routine.startTime} to ${routine.endTime}` : `Off day · ${routine.startTime} to ${routine.endTime}`}</span>
                   <button type="button" aria-label={`${routineCollapsed ? "Expand" : "Collapse"} ${routine.routineName}`} aria-expanded={!routineCollapsed} onClick={() => toggleRoutineCollapse(routine.routineId)}><Chevron expanded={!routineCollapsed} /></button>
                 </div>
                 {!routineCollapsed && <div className="sections">{sections.map(([title, items]) => <section className="section" key={title}><h3>{title}</h3>
@@ -295,7 +296,7 @@ function Dashboard() {
 const editorId = () => crypto.randomUUID();
 const blankItem = (): EditorItem => ({ editorId: editorId(), label: "", parentId: null });
 const blankSection = (): EditorSection => ({ editorId: editorId(), title: "", items: [blankItem()] });
-const blankRoutine = (): EditorRoutine => ({ name: "", category: "Uncategorized", weekdays: [1, 2, 3, 4, 5], startTime: "08:00", endTime: "09:00", sortOrder: 0, sections: [blankSection()] });
+const blankRoutine = (): EditorRoutine => ({ name: "", category: "Uncategorized", isOptional: false, weekdays: [1, 2, 3, 4, 5], startTime: "08:00", endTime: "09:00", sortOrder: 0, sections: [blankSection()] });
 
 function flattenEditorItems(items: EditorItem[]): EditorItem[] {
   const ids = new Set(items.map((item) => item.editorId));
@@ -371,7 +372,7 @@ function Manage() {
     const data = await api<ApiRoutine[]>("/api/routines");
     setRoutines(data.map((routine) => {
       const version = routine.versions[0];
-      return { id: routine.id, name: routine.name, category: routine.category, sortOrder: routine.sortOrder, archivedAt: routine.archivedAt, weekdays: version?.weekdays ?? [], startTime: version?.startTime ?? "08:00", endTime: version?.endTime ?? "09:00", sections: version?.sections.map((section) => {
+      return { id: routine.id, name: routine.name, category: routine.category, isOptional: version?.isOptional ?? false, sortOrder: routine.sortOrder, archivedAt: routine.archivedAt, weekdays: version?.weekdays ?? [], startTime: version?.startTime ?? "08:00", endTime: version?.endTime ?? "09:00", sections: version?.sections.map((section) => {
         const editorIdsByApiId = new Map(section.items.map((item) => [item.id, editorId()]));
         return {
           editorId: editorId(),
@@ -404,6 +405,7 @@ function Manage() {
       const payload = {
         name: draft.name,
         category: draft.category,
+        isOptional: draft.isOptional,
         weekdays: draft.weekdays,
         startTime: draft.startTime,
         endTime: draft.endTime,
@@ -431,10 +433,12 @@ function Manage() {
     await api(`/api/routines/${id}`, { method: "DELETE", body: JSON.stringify({ confirm: true, clientDate: localToday() }) }); await load(); setDraft(blankRoutine());
   };
   return <main><header><div><p className="eyebrow">Shape your days</p><h1>Edit routines</h1></div><nav><Link to="/">Dashboard</Link><Link to="/settings">Settings</Link></nav></header>
-    <div className="manage-layout"><aside className="card routine-list"><button onClick={() => setDraft(blankRoutine())}>+ New routine</button>{routines.map((routine) => <button className={draft.id === routine.id ? "selected-row" : ""} key={routine.id} onClick={() => setDraft(structuredClone(routine))}>{routine.name}{routine.archivedAt ? " (archived)" : ""}</button>)}</aside>
+    <div className="manage-layout"><aside className="card routine-list"><button onClick={() => setDraft(blankRoutine())}>+ New routine</button>{routines.map((routine) => <button className={draft.id === routine.id ? "selected-row" : ""} key={routine.id} onClick={() => setDraft(structuredClone(routine))}>{routine.name}{routine.isOptional ? " (optional)" : ""}{routine.archivedAt ? " (archived)" : ""}</button>)}</aside>
       <form className="card editor" onSubmit={save}><div><h2>{draft.id ? "Edit routine" : "New routine"}</h2><p className="editor-help">Drag the three-line handles to rearrange sections and tasks. On touch screens, press and hold the handle first.</p></div>
         <div className="form-grid"><label>Name<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} required /></label><label>Category<input value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} required /></label><label>Start<input type="time" value={draft.startTime} onChange={(e) => setDraft({ ...draft, startTime: e.target.value })} required /></label><label>End<input type="time" value={draft.endTime} onChange={(e) => setDraft({ ...draft, endTime: e.target.value })} required /></label><label>Display order<input type="number" min="0" value={draft.sortOrder} onChange={(e) => setDraft({ ...draft, sortOrder: Number(e.target.value) })} required /></label></div>
-        <fieldset><legend>Scheduled days</legend>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => <label className="day" key={day}><input type="checkbox" checked={draft.weekdays.includes(index)} onChange={() => setDraft({ ...draft, weekdays: draft.weekdays.includes(index) ? draft.weekdays.filter((value) => value !== index) : [...draft.weekdays, index] })} />{day}</label>)}</fieldset>
+        <label className="optional-setting"><input type="checkbox" checked={draft.isOptional} onChange={(e) => setDraft({ ...draft, isOptional: e.target.checked })} /><span><strong>Optional routine</strong><small>Keep this routine available every day without affecting your completion score.</small></span></label>
+        <fieldset className={draft.isOptional ? "schedule-disabled" : ""} disabled={draft.isOptional}><legend>Scheduled days</legend>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => <label className="day" key={day}><input type="checkbox" checked={draft.weekdays.includes(index)} onChange={() => setDraft({ ...draft, weekdays: draft.weekdays.includes(index) ? draft.weekdays.filter((value) => value !== index) : [...draft.weekdays, index] })} />{day}</label>)}</fieldset>
+        {draft.isOptional && <p className="schedule-note">Optional routines are available every day, so scheduled days do not apply.</p>}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={dropSection}>
           <SortableContext items={draft.sections.map((section) => section.editorId)} strategy={verticalListSortingStrategy}>
             {draft.sections.map((section, sectionIndex) => <SortableEditorRow id={section.editorId} label={`Drag to reorder ${section.title || "section"}`} className="section-sortable" key={section.editorId}>{(sectionHandle) =>

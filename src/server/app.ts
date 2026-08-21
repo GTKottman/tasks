@@ -9,7 +9,7 @@ import helmet from "helmet";
 import { Pool } from "pg";
 import { z } from "zod";
 import { prisma } from "./db";
-import { datesInYear, isScheduled, parseISODate, statusForCounts, toISODate } from "../shared/date";
+import { datesInYear, isScheduled, parseISODate, scoredItemCounts, statusForCounts, toISODate } from "../shared/date";
 import { completionUpdates } from "../shared/taskCompletion";
 
 declare module "express-session" {
@@ -26,8 +26,9 @@ const itemInput = z.object({
 const routineInput = z.object({
   name: z.string().trim().min(1).max(120),
   category: z.string().trim().min(1).max(120).default("Uncategorized"),
+  isOptional: z.boolean().default(false),
   clientDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  weekdays: z.array(z.number().int().min(0).max(6)).min(1),
+  weekdays: z.array(z.number().int().min(0).max(6)),
   startTime: z.string().regex(/^(?:(?:[01]\d|2[0-3]):[0-5]\d|24:00)$/),
   endTime: z.string().regex(/^(?:(?:[01]\d|2[0-3]):[0-5]\d|24:00)$/),
   sortOrder: z.number().int().min(0).default(0),
@@ -36,6 +37,14 @@ const routineInput = z.object({
     title: z.string().trim().min(1).max(120),
     items: z.array(itemInput).min(1),
   })).min(1),
+}).superRefine((input, context) => {
+  if (!input.isOptional && input.weekdays.length === 0) {
+    context.addIssue({
+      code: "custom",
+      path: ["weekdays"],
+      message: "Choose at least one scheduled day",
+    });
+  }
 });
 
 function asyncRoute(handler: (req: Request, res: Response) => Promise<unknown>) {
@@ -76,7 +85,7 @@ async function materialize(date: Date) {
       sections: { orderBy: { sortOrder: "asc" }, include: { items: { orderBy: { sortOrder: "asc" } } } },
     },
   });
-  for (const version of versions.filter((entry) => isScheduled(entry.weekdays, date))) {
+  for (const version of versions.filter((entry) => entry.isOptional || isScheduled(entry.weekdays, date))) {
     await prisma.dailyRoutine.upsert({
       where: { date_routineVersionId: { date, routineVersionId: version.id } },
       update: {},
@@ -84,6 +93,7 @@ async function materialize(date: Date) {
         date,
         routineVersionId: version.id,
         routineName: version.name,
+        isOptional: version.isOptional,
         startTime: version.startTime,
         endTime: version.endTime,
         items: {
@@ -106,6 +116,7 @@ async function materialize(date: Date) {
 function versionData(input: z.infer<typeof routineInput>, effectiveFrom: Date) {
   return {
     name: input.name,
+    isOptional: input.isOptional,
     effectiveFrom,
     weekdays: [...new Set(input.weekdays)].sort(),
     startTime: input.startTime,
@@ -182,7 +193,7 @@ async function syncTodaySnapshot(date: Date, routineId: string, previousVersionI
     prisma.dailyItem.deleteMany({ where: { dailyRoutineId: dailyRoutine.id } }),
     prisma.dailyRoutine.update({
       where: { id: dailyRoutine.id },
-      data: { routineName: version.name, startTime: version.startTime, endTime: version.endTime },
+      data: { routineName: version.name, isOptional: version.isOptional, startTime: version.startTime, endTime: version.endTime },
     }),
     prisma.dailyItem.createMany({ data: items }),
   ]);
@@ -249,12 +260,14 @@ export function createApp() {
       .sort((a, b) => a.routine.sortOrder - b.routine.sortOrder || a.startTime.localeCompare(b.startTime))
       .map((version) => {
         const instance = dailyByVersion.get(version.id);
-        const scheduled = isScheduled(version.weekdays, date);
+        const isOptional = instance?.isOptional ?? version.isOptional;
+        const scheduled = isOptional || isScheduled(version.weekdays, date);
         return {
           id: instance?.id ?? version.id,
           routineId: version.routineId,
           routineName: instance?.routineName ?? version.name,
           category: version.routine.category,
+          isOptional,
           weekdays: version.weekdays,
           startTime: instance?.startTime ?? version.startTime,
           endTime: instance?.endTime ?? version.endTime,
@@ -273,19 +286,19 @@ export function createApp() {
           ),
         };
       });
-    const existing = new Map<string, { completed: number; total: number }>();
+    const instancesByDate = new Map<string, typeof yearInstances>();
     for (const instance of yearInstances) {
       const key = toISODate(instance.date);
-      const counts = existing.get(key) ?? { completed: 0, total: 0 };
-      counts.total += instance.items.length;
-      counts.completed += instance.items.filter((item) => item.completed).length;
-      existing.set(key, counts);
+      const instances = instancesByDate.get(key) ?? [];
+      instances.push(instance);
+      instancesByDate.set(key, instances);
     }
     const yearStatus = datesInYear(year).map((iso) => {
       const day = parseISODate(iso);
-      const counts = existing.get(iso);
-      const scheduled = yearVersions.some((v) => v.effectiveFrom <= day && (!v.effectiveTo || v.effectiveTo >= day) && isScheduled(v.weekdays, day));
-      return { date: iso, status: counts ? statusForCounts(counts.completed, counts.total) : scheduled ? "low" : "none", completed: counts?.completed ?? 0, total: counts?.total ?? 0 };
+      const dayInstances = instancesByDate.get(iso);
+      const counts = dayInstances ? scoredItemCounts(dayInstances) : undefined;
+      const scheduled = yearVersions.some((v) => !v.isOptional && v.effectiveFrom <= day && (!v.effectiveTo || v.effectiveTo >= day) && isScheduled(v.weekdays, day));
+      return { date: iso, status: counts?.total ? statusForCounts(counts.completed, counts.total) : scheduled ? "low" : "none", completed: counts?.completed ?? 0, total: counts?.total ?? 0 };
     });
     res.json({ date: toISODate(date), year, routines, yearStatus });
   }));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { datesInYear, isLeapYear, isScheduled, parseISODate, statusForCounts, toISODate } from "./date";
+import { datesInYear, isLeapYear, isScheduled, parseISODate, scoredItemCounts, statusForCounts, toISODate } from "./date";
 
 describe("date-only utilities", () => {
   it("applies Gregorian leap-year rules", () => {
@@ -31,5 +31,18 @@ describe("daily status", () => {
     [4, 4, "complete"],
   ])("maps %i of %i to %s", (completed, total, status) => {
     expect(statusForCounts(completed, total)).toBe(status);
+  });
+
+  it("excludes optional routines from completion counts", () => {
+    expect(scoredItemCounts([
+      { isOptional: false, items: [{ completed: true }, { completed: false }] },
+      { isOptional: true, items: [{ completed: false }, { completed: false }] },
+    ])).toEqual({ completed: 1, total: 2 });
+  });
+
+  it("returns empty counts when only optional routines exist", () => {
+    expect(scoredItemCounts([
+      { isOptional: true, items: [{ completed: true }, { completed: false }] },
+    ])).toEqual({ completed: 0, total: 0 });
   });
 });

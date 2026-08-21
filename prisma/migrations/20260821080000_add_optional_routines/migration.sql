@@ -1,0 +1,5 @@
+ALTER TABLE "RoutineVersion"
+ADD COLUMN "isOptional" BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE "DailyRoutine"
+ADD COLUMN "isOptional" BOOLEAN NOT NULL DEFAULT false;

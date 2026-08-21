@@ -30,6 +30,7 @@ model RoutineVersion {
   id            String         @id @default(cuid())
   routineId     String
   name          String
+  isOptional    Boolean        @default(false)
   effectiveFrom DateTime       @db.Date
   effectiveTo   DateTime?      @db.Date
   weekdays      Int[]
@@ -73,6 +74,7 @@ model DailyRoutine {
   date             DateTime       @db.Date
   routineVersionId String
   routineName      String
+  isOptional       Boolean        @default(false)
   startTime        String
   endTime          String
   createdAt        DateTime       @default(now())
