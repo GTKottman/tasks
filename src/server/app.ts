@@ -371,6 +371,9 @@ export function createApp() {
       const effectiveFrom = hasSnapshot > 0 ? tomorrow : current.effectiveFrom > today ? current.effectiveFrom : today;
 
       if (isUnmaterializedCurrentOrFuture) {
+        // Future previews can materialize rows that still point at this version.
+        // Remove those snapshots before replacing the version to avoid FK failures.
+        await tx.dailyRoutine.deleteMany({ where: { routineVersionId: current.id } });
         await tx.routineVersion.delete({ where: { id: current.id } });
       } else {
         await tx.routineVersion.update({
