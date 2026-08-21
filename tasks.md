@@ -110,14 +110,14 @@
 * [ ] Wallet
 * [ ] Keys
 
-# Nightly Routine
+# Nightly Weekday Routine
 
-### Prepare Tomorrow
+### Prepare for Tomorrow
 
 * [ ] Pick out tomorrow's clothes
-* [ ] Set aside anything needed for tomorrow
+* [ ] Set aside anything needed for work / appointments
 * [ ] Plug in phone / devices
-* [ ] Set alarms if needed
+* [ ] Set alarms for tomorrow
 
 ### Reset the Apartment
 
@@ -152,4 +152,47 @@
 * [ ] Confirm alarms are set
 * [ ] Turn off all lights
 * [ ] Final quick room check
+* [ ] Get into bed
+
+---
+
+# Nightly Weekend Routine
+
+### Prepare for Tomorrow
+
+* [ ] Pick out comfortable clothes for tomorrow (if needed)
+* [ ] Set aside anything needed for weekend activities or errands
+* [ ] Plug in phone / devices
+* [ ] Set alarms only if needed
+
+### Reset the Apartment
+
+* [ ] Clean off desk
+* [ ] Clean off living room table / surfaces
+* [ ] Clean off dining room table
+* [ ] Clean off kitchen counter
+* [ ] Put away dishes and food
+* [ ] Organize bathroom counter
+* [ ] Pick everything up off the floor
+* [ ] Put misplaced things back where they belong
+* [ ] Throw away all trash
+
+### Shower + Night Hygiene
+
+* [ ] Optional: Shower or quick wash up
+* [ ] Change into comfortable sleepwear
+* [ ] Brush teeth
+* [ ] Mouthwash (optional)
+* [ ] Face / skincare (optional)
+* [ ] Use bathroom
+
+### Bed Setup
+
+* [ ] Get water or other nighttime drink
+* [ ] Get face mask (if using)
+* [ ] Get nighttime earbuds (if using)
+* [ ] Ensure phone / devices are charging
+* [ ] Confirm alarms as needed
+* [ ] Turn off all lights
+* [ ] Final quick room check (optional)
 * [ ] Get into bed

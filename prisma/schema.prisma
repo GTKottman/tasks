@@ -18,6 +18,7 @@ model User {
 model Routine {
   id         String           @id @default(cuid())
   name       String
+  category   String           @default("Uncategorized")
   sortOrder  Int              @default(0)
   archivedAt DateTime?
   createdAt  DateTime         @default(now())

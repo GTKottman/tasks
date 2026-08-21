@@ -24,6 +24,8 @@ const itemInput = z.object({
 });
 const routineInput = z.object({
   name: z.string().trim().min(1).max(120),
+  category: z.string().trim().min(1).max(120).default("Uncategorized"),
+  clientDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   weekdays: z.array(z.number().int().min(0).max(6)).min(1),
   startTime: z.string().regex(/^(?:(?:[01]\d|2[0-3]):[0-5]\d|24:00)$/),
   endTime: z.string().regex(/^(?:(?:[01]\d|2[0-3]):[0-5]\d|24:00)$/),
@@ -226,11 +228,49 @@ export function createApp() {
     const date = parseISODate(z.string().optional().default(toISODate(new Date())).parse(req.query.date));
     const year = z.coerce.number().int().min(2000).max(2200).optional().default(date.getUTCFullYear()).parse(req.query.year);
     await materialize(date);
-    const [daily, yearInstances, versions] = await Promise.all([
+    const [daily, dayVersions, yearInstances, yearVersions] = await Promise.all([
       prisma.dailyRoutine.findMany({ where: { date }, include: { items: { orderBy: [{ sectionOrder: "asc" }, { itemOrder: "asc" }] } }, orderBy: { startTime: "asc" } }),
+      prisma.routineVersion.findMany({
+        where: {
+          effectiveFrom: { lte: date },
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: date } }],
+        },
+        include: {
+          routine: true,
+          sections: { orderBy: { sortOrder: "asc" }, include: { items: { orderBy: { sortOrder: "asc" } } } },
+        },
+      }),
       prisma.dailyRoutine.findMany({ where: { date: { gte: new Date(Date.UTC(year, 0, 1)), lte: new Date(Date.UTC(year, 11, 31)) } }, include: { items: true } }),
       prisma.routineVersion.findMany({ where: { effectiveFrom: { lte: new Date(Date.UTC(year, 11, 31)) }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date(Date.UTC(year, 0, 1)) } }] } }),
     ]);
+    const dailyByVersion = new Map(daily.map((instance) => [instance.routineVersionId, instance]));
+    const routines = dayVersions
+      .sort((a, b) => a.routine.sortOrder - b.routine.sortOrder || a.startTime.localeCompare(b.startTime))
+      .map((version) => {
+        const instance = dailyByVersion.get(version.id);
+        const scheduled = isScheduled(version.weekdays, date);
+        return {
+          id: instance?.id ?? version.id,
+          routineId: version.routineId,
+          routineName: instance?.routineName ?? version.name,
+          category: version.routine.category,
+          weekdays: version.weekdays,
+          startTime: instance?.startTime ?? version.startTime,
+          endTime: instance?.endTime ?? version.endTime,
+          scheduled,
+          items: instance?.items ?? version.sections.flatMap((section) =>
+            section.items.map((item) => ({
+              id: item.id,
+              label: item.label,
+              completed: false,
+              sectionTitle: section.title,
+              sectionOrder: section.sortOrder,
+              itemOrder: item.sortOrder,
+              parentSourceId: item.parentId,
+            })),
+          ),
+        };
+      });
     const existing = new Map<string, { completed: number; total: number }>();
     for (const instance of yearInstances) {
       const key = toISODate(instance.date);
@@ -242,10 +282,10 @@ export function createApp() {
     const yearStatus = datesInYear(year).map((iso) => {
       const day = parseISODate(iso);
       const counts = existing.get(iso);
-      const scheduled = versions.some((v) => v.effectiveFrom <= day && (!v.effectiveTo || v.effectiveTo >= day) && isScheduled(v.weekdays, day));
+      const scheduled = yearVersions.some((v) => v.effectiveFrom <= day && (!v.effectiveTo || v.effectiveTo >= day) && isScheduled(v.weekdays, day));
       return { date: iso, status: counts ? statusForCounts(counts.completed, counts.total) : scheduled ? "low" : "none", completed: counts?.completed ?? 0, total: counts?.total ?? 0 };
     });
-    res.json({ date: toISODate(date), year, routines: daily, yearStatus });
+    res.json({ date: toISODate(date), year, routines, yearStatus });
   }));
   app.patch("/api/items/:id", requireCsrf, asyncRoute(async (req, res) => {
     const { completed } = z.object({ completed: z.boolean() }).parse(req.body);
@@ -268,7 +308,8 @@ export function createApp() {
   }));
   app.post("/api/routines", requireCsrf, asyncRoute(async (req, res) => {
     const input = routineInput.parse(req.body);
-    const routine = await prisma.routine.create({ data: { name: input.name, sortOrder: input.sortOrder, versions: { create: versionData(input, parseISODate(toISODate(new Date()))) } } });
+    const today = parseISODate(input.clientDate ?? toISODate(new Date()));
+    const routine = await prisma.routine.create({ data: { name: input.name, category: input.category, sortOrder: input.sortOrder, versions: { create: versionData(input, today) } } });
     await applyParentLinks(routine.id, input);
     res.status(201).json(routine);
   }));
@@ -279,7 +320,7 @@ export function createApp() {
       return;
     }
     const routineId = routeId(req);
-    const today = parseISODate(toISODate(new Date()));
+    const today = parseISODate(input.clientDate ?? toISODate(new Date()));
     const yesterday = new Date(today.getTime() - 86_400_000);
     const tomorrow = new Date(today.getTime() + 86_400_000);
     const snapshotVersionId = await prisma.$transaction(async (tx) => {
@@ -311,6 +352,7 @@ export function createApp() {
         where: { id: routineId },
         data: {
           name: input.name,
+          category: input.category,
           sortOrder: input.sortOrder,
           archivedAt: null,
           versions: { create: versionData(input, effectiveFrom) },
@@ -323,8 +365,8 @@ export function createApp() {
     res.status(204).end();
   }));
   app.delete("/api/routines/:id", requireCsrf, asyncRoute(async (req, res) => {
-    z.object({ confirm: z.literal(true) }).parse(req.body);
-    const today = parseISODate(toISODate(new Date()));
+    const input = z.object({ confirm: z.literal(true), clientDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }).parse(req.body);
+    const today = parseISODate(input.clientDate ?? toISODate(new Date()));
     const yesterday = new Date(today.getTime() - 86_400_000);
     await prisma.$transaction([
       prisma.routine.update({ where: { id: routeId(req) }, data: { archivedAt: new Date() } }),
