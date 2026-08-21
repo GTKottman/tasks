@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Routine {
+  id         String           @id @default(cuid())
+  name       String
+  sortOrder  Int              @default(0)
+  archivedAt DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  versions   RoutineVersion[]
+}
+
+model RoutineVersion {
+  id            String         @id @default(cuid())
+  routineId     String
+  name          String
+  effectiveFrom DateTime       @db.Date
+  effectiveTo   DateTime?      @db.Date
+  weekdays      Int[]
+  startTime     String
+  endTime       String
+  createdAt     DateTime       @default(now())
+  routine       Routine        @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  sections      Section[]
+  dailyRoutines DailyRoutine[]
+
+  @@index([routineId, effectiveFrom, effectiveTo])
+}
+
+model Section {
+  id               String         @id @default(cuid())
+  routineVersionId String
+  title            String
+  sortOrder        Int
+  routineVersion   RoutineVersion @relation(fields: [routineVersionId], references: [id], onDelete: Cascade)
+  items            Item[]
+
+  @@index([routineVersionId, sortOrder])
+}
+
+model Item {
+  id        String  @id @default(cuid())
+  sectionId String
+  parentId  String?
+  label     String
+  sortOrder Int
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  parent    Item?   @relation("ItemChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Item[]  @relation("ItemChildren")
+
+  @@index([sectionId, sortOrder])
+  @@index([parentId])
+}
+
+model DailyRoutine {
+  id               String         @id @default(cuid())
+  date             DateTime       @db.Date
+  routineVersionId String
+  routineName      String
+  startTime        String
+  endTime          String
+  createdAt        DateTime       @default(now())
+  routineVersion   RoutineVersion @relation(fields: [routineVersionId], references: [id])
+  items            DailyItem[]
+
+  @@unique([date, routineVersionId])
+  @@index([date])
+}
+
+model DailyItem {
+  id             String       @id @default(cuid())
+  dailyRoutineId String
+  sourceItemId   String?
+  sectionTitle   String
+  sectionOrder   Int
+  label          String
+  itemOrder      Int
+  parentSourceId String?
+  completed      Boolean      @default(false)
+  completedAt    DateTime?
+  dailyRoutine   DailyRoutine @relation(fields: [dailyRoutineId], references: [id], onDelete: Cascade)
+
+  @@index([dailyRoutineId, sectionOrder, itemOrder])
+}

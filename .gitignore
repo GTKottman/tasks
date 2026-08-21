@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Build and test output
+dist/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# Generated application code
+src/generated/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local databases and database exports
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.gz
+
+# Editor files
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak

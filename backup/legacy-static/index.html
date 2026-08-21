@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Routines</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="page-header">
+        <h1>Daily Routines</h1>
+        <button type="button" id="sound-toggle" class="sound-toggle" aria-pressed="true" aria-label="Mute sounds">Sounds on</button>
+    </header>
+    <div class="routine" data-days="1,2,3,4,5" data-start="07:00" data-end="12:00">
+    <h2>Weekday Morning Routine</h2>
+    <div class="routine-columns">
+    <div class="routine-column">
+    <h3>Before the Shower</h3>
+    <div class="before-shower-list">
+        <label class="before-shower-item">
+            <input type="checkbox"> <span class="label">Wake up</span></label>
+        <label class="before-shower-item">
+            <input type="checkbox"> <span class="label">Get out of bed</span></label>
+        <label class="before-shower-item">
+            <input type="checkbox"> <span class="label">Locate a clean towel</span></label>
+        <label class="before-shower-item">
+            <input type="checkbox"> <span class="label">Get water</span></label>
+        <label class="before-shower-item">
+            <input type="checkbox"> <span class="label">Pick out clothes</span></label>
+        <label class="before-shower-item">
+            <input type="checkbox"> <span class="label">Bring everything you need into the bathroom</span></label>
+    </div>
+    </div>
+
+    <div class="routine-column">
+    <h3>Shower + Hygiene</h3>
+    <div class="shower-hygiene-list">
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Put on the news or music</span></label>
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Shave if needed</span></label>
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Shower</span></label>
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Wash hair</span></label>
+        <div class="shower-hygiene-sublist">
+            <label class="shower-hygiene-subitem">
+                <input type="checkbox"> <span class="label">Shampoo</span></label>
+            <label class="shower-hygiene-subitem">
+                <input type="checkbox"> <span class="label">Conditioner</span></label>
+            <label class="shower-hygiene-subitem">
+                <input type="checkbox"> <span class="label">Scrub / wash skin thoroughly</span></label>
+        </div>
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Baking soda on tongue</span></label>
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Brush teeth</span></label>
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Mouthwash</span></label>
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Dry off completely</span></label>
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Hang Towel</span></label>
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Deodorant</span></label>
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Cologne</span></label>
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Get dressed</span></label>
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Do hair</span></label>
+        <label class="shower-hygiene-item">
+            <input type="checkbox"> <span class="label">Hamper up old clothes</span></label>
+    </div>
+    </div>
+
+    <div class="routine-column">
+    <h3>Breakfast + Meds</h3>
+    <div class="breakfast-meds-list">
+        <label class="breakfast-meds-item">
+            <input type="checkbox"> <span class="label">Make something high in protein and low in sugar</span></label>
+        <label class="breakfast-meds-item">
+            <input type="checkbox"> <span class="label">Eat</span></label>
+        <label class="breakfast-meds-item">
+            <input type="checkbox"> <span class="label">Take Dapsone as prescribed</span></label>
+        <label class="breakfast-meds-item">
+            <input type="checkbox"> <span class="label">Take Lexapro as prescribed</span></label>
+        <label class="breakfast-meds-item">
+            <input type="checkbox"> <span class="label">Magnesium</span></label>
+        <label class="breakfast-meds-item">
+            <input type="checkbox"> <span class="label">NAC</span></label>
+        <label class="breakfast-meds-item">
+            <input type="checkbox"> <span class="label">Zinc</span></label>
+        <label class="breakfast-meds-item">
+            <input type="checkbox"> <span class="label">Vitamin D</span></label>
+        <label class="breakfast-meds-item">
+            <input type="checkbox"> <span class="label">Probiotics</span></label>
+        <label class="breakfast-meds-item">
+            <input type="checkbox"> <span class="label">Fill water bottle</span></label>
+    </div>
+    </div>
+
+    <div class="routine-column">
+    <h3>School Check</h3>
+    <div class="school-check-list">
+        <label class="school-check-item">
+            <input type="checkbox"> <span class="label">Check today's class schedule</span></label>
+        <label class="school-check-item">
+            <input type="checkbox"> <span class="label">Check for anything due or time-sensitive</span></label>
+        <label class="school-check-item">
+            <input type="checkbox"> <span class="label">Pack laptop</span></label>
+        <label class="school-check-item">
+            <input type="checkbox"> <span class="label">Pack laptop charger</span></label>
+        <label class="school-check-item">
+            <input type="checkbox"> <span class="label">School ID</span></label>
+        <label class="school-check-item">
+            <input type="checkbox"> <span class="label">Headphones / earbuds</span></label>
+        <label class="school-check-item">
+            <input type="checkbox"> <span class="label">Phone</span></label>
+        <label class="school-check-item">
+            <input type="checkbox"> <span class="label">Wallet</span></label>
+        <label class="school-check-item">
+            <input type="checkbox"> <span class="label">Keys</span></label>
+        <label class="school-check-item">
+            <input type="checkbox"> <span class="label">Sunglasses</span></label>
+        <label class="school-check-item">
+            <input type="checkbox"> <span class="label">Drink</span></label>
+        <label class="school-check-item">
+            <input type="checkbox"> <span class="label">Final bag check</span></label>
+    </div>
+    </div>
+    </div>
+    </div>
+
+
+    <div class="routine" data-days="0,6" data-start="09:00" data-end="12:00">
+    <h2>Weekend Morning Routine</h2>
+    <div class="routine-columns">
+    <div class="routine-column">
+    <h3>Before the Shower</h3>
+    <div class="before-shower-list">
+        <label class="before-shower-item"><input type="checkbox"> <span class="label">Wake up</span></label>
+        <label class="before-shower-item"><input type="checkbox"> <span class="label">Get out of bed</span></label>
+        <label class="before-shower-item"><input type="checkbox"> <span class="label">Locate a clean towel</span></label>
+        <label class="before-shower-item"><input type="checkbox"> <span class="label">Get water</span></label>
+        <label class="before-shower-item"><input type="checkbox"> <span class="label">Pick out clothes</span></label>
+        <label class="before-shower-item"><input type="checkbox"> <span class="label">Bring everything you need into the bathroom</span></label>
+    </div>
+    </div>
+
+    <div class="routine-column">
+    <h3>Shower + Hygiene</h3>
+    <div class="shower-hygiene-list">
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Put on the news or music</span></label>
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Shave if needed</span></label>
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Shower</span></label>
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Wash hair</span></label>
+        <label class="shower-hygiene-subitem" style="margin-left: 24px;"><input type="checkbox"> <span class="label">Shampoo</span></label>
+        <label class="shower-hygiene-subitem" style="margin-left: 24px;"><input type="checkbox"> <span class="label">Conditioner</span></label>
+        <label class="shower-hygiene-subitem" style="margin-left: 24px;"><input type="checkbox"> <span class="label">Scrub / wash skin thoroughly</span></label>
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Baking soda on tongue</span></label>
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Brush teeth</span></label>
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Mouthwash</span></label>
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Dry off completely</span></label>
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Hang Towel</span></label>
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Deodorant</span></label>
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Cologne</span></label>
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Get dressed</span></label>
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Do hair</span></label>
+        <label class="shower-hygiene-item"><input type="checkbox"> <span class="label">Hamper up old clothes</span></label>
+    </div>
+    </div>
+
+    <div class="routine-column">
+    <h3>Breakfast + Meds</h3>
+    <div class="breakfast-meds-list">
+        <label class="breakfast-meds-item"><input type="checkbox"> <span class="label">Make something high in protein and low in sugar</span></label>
+        <label class="breakfast-meds-item"><input type="checkbox"> <span class="label">Eat</span></label>
+        <label class="breakfast-meds-item"><input type="checkbox"> <span class="label">Take Dapsone as prescribed</span></label>
+        <label class="breakfast-meds-item"><input type="checkbox"> <span class="label">Take Lexapro as prescribed</span></label>
+        <label class="breakfast-meds-item"><input type="checkbox"> <span class="label">Magnesium</span></label>
+        <label class="breakfast-meds-item"><input type="checkbox"> <span class="label">NAC</span></label>
+        <label class="breakfast-meds-item"><input type="checkbox"> <span class="label">Zinc</span></label>
+        <label class="breakfast-meds-item"><input type="checkbox"> <span class="label">Vitamin D</span></label>
+        <label class="breakfast-meds-item"><input type="checkbox"> <span class="label">Probiotics</span></label>
+        <label class="breakfast-meds-item"><input type="checkbox"> <span class="label">Fill water bottle</span></label>
+    </div>
+    </div>
+
+    <div class="routine-column">
+    <h3>Start the Day</h3>
+    <div class="start-day-list">
+        <label class="start-day-item"><input type="checkbox"> <span class="label">Check what you have planned today</span></label>
+        <label class="start-day-item"><input type="checkbox"> <span class="label">Phone</span></label>
+        <label class="start-day-item"><input type="checkbox"> <span class="label">Wallet</span></label>
+        <label class="start-day-item"><input type="checkbox"> <span class="label">Keys</span></label>
+    </div>
+    </div>
+    </div>
+    </div>
+
+
+    <div class="routine" data-days="1,2,3,4,5" data-start="21:30" data-end="24:00">
+    <h2>Nightly Weekday Routine</h2>
+    <div class="routine-columns">
+
+    <div class="routine-column">
+    <h3>Prepare for Tomorrow</h3>
+    <div class="prepare-tomorrow-list">
+        <label class="prepare-tomorrow-item"><input type="checkbox"> <span class="label">Pick out tomorrow's clothes</span></label>
+        <label class="prepare-tomorrow-item"><input type="checkbox"> <span class="label">Set aside anything needed for work / appointments</span></label>
+        <label class="prepare-tomorrow-item"><input type="checkbox"> <span class="label">Plug in phone / devices</span></label>
+        <label class="prepare-tomorrow-item"><input type="checkbox"> <span class="label">Set alarms for tomorrow</span></label>
+    </div>
+    </div>
+
+    <div class="routine-column">
+    <h3>Reset the Apartment</h3>
+    <div class="reset-apartment-list">
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Clean off desk</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Clean off living room table / surfaces</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Clean off dining room table</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Clean off kitchen counter</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Put away dishes and food</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Organize bathroom counter</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Pick everything up off the floor</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Put misplaced things back where they belong</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Throw away all trash</span></label>
+    </div>
+    </div>
+
+    <div class="routine-column">
+    <h3>Shower + Night Hygiene</h3>
+    <div class="night-hygiene-list">
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Shower</span></label>
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Wash body thoroughly</span></label>
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Wash hair if needed</span></label>
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Dry off</span></label>
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Put on clean sleep clothes</span></label>
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Brush teeth</span></label>
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Mouthwash</span></label>
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Face / skincare</span></label>
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Use bathroom</span></label>
+    </div>
+    </div>
+
+    <div class="routine-column">
+    <h3>Bed Setup</h3>
+    <div class="bed-setup-list">
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Get water</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Get face mask</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Get nighttime earbuds</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Plug in phone / devices if not already charging</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Confirm alarms are set</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Turn off all lights</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Final quick room check</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Get into bed</span></label>
+    </div>
+    </div>
+    </div>
+    </div>
+
+    <div class="routine" data-days="0,6" data-start="21:30" data-end="24:00">
+    <h2>Nightly Weekend Routine</h2>
+    <div class="routine-columns">
+
+    <div class="routine-column">
+    <h3>Prepare for Tomorrow</h3>
+    <div class="prepare-tomorrow-list">
+        <label class="prepare-tomorrow-item"><input type="checkbox"> <span class="label">Pick out comfortable clothes for tomorrow (if needed)</span></label>
+        <label class="prepare-tomorrow-item"><input type="checkbox"> <span class="label">Set aside anything needed for weekend activities or errands</span></label>
+        <label class="prepare-tomorrow-item"><input type="checkbox"> <span class="label">Plug in phone / devices</span></label>
+        <label class="prepare-tomorrow-item"><input type="checkbox"> <span class="label">Set alarms only if needed</span></label>
+    </div>
+    </div>
+
+    <div class="routine-column">
+    <h3>Reset the Apartment</h3>
+    <div class="reset-apartment-list">
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Clean off desk</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Clean off living room table / surfaces</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Clean off dining room table</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Clean off kitchen counter</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Put away dishes and food</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Organize bathroom counter</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Pick everything up off the floor</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Put misplaced things back where they belong</span></label>
+        <label class="reset-apartment-item"><input type="checkbox"> <span class="label">Throw away all trash</span></label>
+    </div>
+    </div>
+
+    <div class="routine-column">
+    <h3>Shower + Night Hygiene</h3>
+    <div class="night-hygiene-list">
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Optional: Shower or quick wash up</span></label>
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Change into comfortable sleepwear</span></label>
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Brush teeth</span></label>
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Mouthwash (optional)</span></label>
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Face / skincare (optional)</span></label>
+        <label class="night-hygiene-item"><input type="checkbox"> <span class="label">Use bathroom</span></label>
+    </div>
+    </div>
+
+    <div class="routine-column">
+    <h3>Bed Setup</h3>
+    <div class="bed-setup-list">
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Get water or other nighttime drink</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Get face mask (if using)</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Get nighttime earbuds (if using)</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Ensure phone / devices are charging</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Confirm alarms as needed</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Turn off all lights</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Final quick room check (optional)</span></label>
+        <label class="bed-setup-item"><input type="checkbox"> <span class="label">Get into bed</span></label>
+    </div>
+    </div>
+    </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
