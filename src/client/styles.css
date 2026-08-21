@@ -7,7 +7,9 @@ button,a { color:inherit; }
 button { cursor:pointer; }
 main { max-width:1600px; margin:auto; padding:clamp(1.5rem,4vw,4rem); }
 header { display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; margin-bottom:2.5rem; }
-nav,.date-row,.actions,.editor-row,.year-heading { display:flex; align-items:center; gap:.65rem; }
+nav,.actions,.editor-row,.year-heading { display:flex; align-items:center; gap:.65rem; }
+.date-row { display:flex; align-items:flex-end; gap:.65rem; }
+.date-row > button { align-self:flex-end; }
 h1,h2 { font-family:"Fraunces",serif; margin:.1rem 0; letter-spacing:-.035em; }
 h1 { font-size:clamp(2.8rem,7vw,6rem); line-height:.9; }
 h2 { font-size:1.65rem; }

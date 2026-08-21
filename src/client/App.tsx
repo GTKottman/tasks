@@ -9,6 +9,17 @@ type EditorSection = { title: string; items: EditorItem[] };
 type EditorRoutine = { id?: string; name: string; weekdays: number[]; startTime: string; endTime: string; sortOrder: number; sections: EditorSection[]; archivedAt?: string | null };
 type ApiRoutine = { id: string; name: string; sortOrder: number; archivedAt: string | null; versions: Array<{ weekdays: number[]; startTime: string; endTime: string; sections: Array<{ title: string; items: Array<{ id: string; label: string; parentId: string | null }> }> }> };
 
+const SOUND_NAMES = ["box-checked", "box-unchecked", "section-completed", "routine-completed"] as const;
+const audioCache = new Map<string, HTMLAudioElement>();
+function getSound(name: string) {
+  const cached = audioCache.get(name);
+  if (cached) return cached;
+  const audio = new Audio(`/assets/sounds/${name}.wav`);
+  audio.preload = "auto";
+  audioCache.set(name, audio);
+  return audio;
+}
+
 let csrfToken = "";
 function groupItemsBySection(items: DailyItem[]): Array<[string, DailyItem[]]> {
   const groups = new Map<string, DailyItem[]>();
@@ -73,6 +84,18 @@ function Dashboard() {
     const timer = window.setInterval(() => setClock((value) => value + 1), 30_000);
     return () => window.clearInterval(timer);
   }, []);
+  useEffect(() => {
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        SOUND_NAMES.forEach((name) => getSound(name).load());
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      window.cancelAnimationFrame(secondFrame);
+    };
+  }, []);
   const active = (routine: DailyRoutine) => {
     if (date !== localToday()) return false;
     const now = new Date(); const minutes = now.getHours() * 60 + now.getMinutes();
@@ -81,7 +104,8 @@ function Dashboard() {
   };
   const play = (name: string) => {
     if (!sound) return;
-    void new Audio(`/assets/sounds/${name}.wav`).play().catch(() => undefined);
+    const audio = getSound(name).cloneNode(true) as HTMLAudioElement;
+    void audio.play().catch(() => undefined);
   };
   const toggle = async (item: DailyItem) => {
     const completed = !item.completed;

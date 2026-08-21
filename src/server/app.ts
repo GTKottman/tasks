@@ -135,6 +135,56 @@ async function applyParentLinks(routineId: string, input: z.infer<typeof routine
   await Promise.all(updates);
 }
 
+async function syncTodaySnapshot(date: Date, routineId: string, previousVersionId: string) {
+  const [version, dailyRoutine] = await Promise.all([
+    prisma.routineVersion.findFirst({
+      where: { routineId, effectiveTo: null },
+      orderBy: { createdAt: "desc" },
+      include: {
+        sections: { orderBy: { sortOrder: "asc" }, include: { items: { orderBy: { sortOrder: "asc" } } } },
+      },
+    }),
+    prisma.dailyRoutine.findUnique({
+      where: { date_routineVersionId: { date, routineVersionId: previousVersionId } },
+      include: { items: { orderBy: [{ sectionOrder: "asc" }, { itemOrder: "asc" }] } },
+    }),
+  ]);
+  if (!version || !dailyRoutine) return;
+
+  const completionByLabel = new Map<string, Array<{ completed: boolean; completedAt: Date | null }>>();
+  for (const item of dailyRoutine.items) {
+    const completions = completionByLabel.get(item.label) ?? [];
+    completions.push({ completed: item.completed, completedAt: item.completedAt });
+    completionByLabel.set(item.label, completions);
+  }
+
+  const items = version.sections.flatMap((section) =>
+    section.items.map((item) => {
+      const completion = completionByLabel.get(item.label)?.shift();
+      return {
+        dailyRoutineId: dailyRoutine.id,
+        sourceItemId: item.id,
+        sectionTitle: section.title,
+        sectionOrder: section.sortOrder,
+        label: item.label,
+        itemOrder: item.sortOrder,
+        parentSourceId: item.parentId,
+        completed: completion?.completed ?? false,
+        completedAt: completion?.completedAt ?? null,
+      };
+    }),
+  );
+
+  await prisma.$transaction([
+    prisma.dailyItem.deleteMany({ where: { dailyRoutineId: dailyRoutine.id } }),
+    prisma.dailyRoutine.update({
+      where: { id: dailyRoutine.id },
+      data: { routineName: version.name, startTime: version.startTime, endTime: version.endTime },
+    }),
+    prisma.dailyItem.createMany({ data: items }),
+  ]);
+}
+
 export function createApp() {
   const app = express();
   if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
@@ -232,16 +282,20 @@ export function createApp() {
     const today = parseISODate(toISODate(new Date()));
     const yesterday = new Date(today.getTime() - 86_400_000);
     const tomorrow = new Date(today.getTime() + 86_400_000);
-    await prisma.$transaction(async (tx) => {
+    const snapshotVersionId = await prisma.$transaction(async (tx) => {
       const current = await tx.routineVersion.findFirst({
         where: { routineId },
         orderBy: { effectiveFrom: "desc" },
       });
       if (!current) throw new Error("Routine has no active version");
 
-      const hasSnapshot = await tx.dailyRoutine.count({
-        where: { routineVersionId: current.id, date: today },
-      });
+      const [hasSnapshot, todaySnapshot] = await Promise.all([
+        tx.dailyRoutine.count({ where: { routineVersionId: current.id, date: today } }),
+        tx.dailyRoutine.findFirst({
+          where: { date: today, routineVersion: { routineId } },
+          select: { routineVersionId: true },
+        }),
+      ]);
       const isUnmaterializedCurrentOrFuture = current.effectiveFrom >= today && hasSnapshot === 0;
       const effectiveFrom = hasSnapshot > 0 ? tomorrow : current.effectiveFrom > today ? current.effectiveFrom : today;
 
@@ -262,8 +316,10 @@ export function createApp() {
           versions: { create: versionData(input, effectiveFrom) },
         },
       });
+      return todaySnapshot?.routineVersionId ?? null;
     });
     await applyParentLinks(routineId, input);
+    if (snapshotVersionId) await syncTodaySnapshot(today, routineId, snapshotVersionId);
     res.status(204).end();
   }));
   app.delete("/api/routines/:id", requireCsrf, asyncRoute(async (req, res) => {
