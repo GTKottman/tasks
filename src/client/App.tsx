@@ -21,6 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { completionUpdates } from "../shared/taskCompletion";
+import { SETTINGS_EVENT, applySettings, readSettings, saveSettings, type AppSettings, type DensityPreference, type ThemePreference } from "./settings";
 
 type DailyItem = { id: string; sourceItemId: string | null; label: string; completed: boolean; sectionTitle: string; sectionOrder: number; parentSourceId: string | null };
 type DailyRoutine = { id: string; routineId: string; routineName: string; category: string; isOptional: boolean; weekdays: number[]; startTime: string; endTime: string; scheduled: boolean; items: DailyItem[] };
@@ -32,51 +33,6 @@ type ApiRoutine = { id: string; name: string; category: string; sortOrder: numbe
 
 const SOUND_NAMES = ["box-checked", "box-unchecked", "section-completed", "routine-completed"] as const;
 const audioCache = new Map<string, HTMLAudioElement>();
-type ThemePreference = "system" | "light" | "dark";
-type DensityPreference = "comfortable" | "compact";
-type AppSettings = {
-  theme: ThemePreference;
-  sounds: boolean;
-  density: DensityPreference;
-  reduceMotion: boolean;
-};
-
-const SETTINGS_KEY = "daily-routines-settings";
-const SETTINGS_EVENT = "daily-routines-settings-changed";
-const defaultSettings: AppSettings = {
-  theme: "system",
-  sounds: true,
-  density: "comfortable",
-  reduceMotion: false,
-};
-
-function readSettings(): AppSettings {
-  try {
-    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}") as Partial<AppSettings>;
-    return {
-      ...defaultSettings,
-      ...saved,
-      sounds: saved.sounds ?? localStorage.getItem("routine-sound") !== "off",
-    };
-  } catch {
-    return defaultSettings;
-  }
-}
-
-function applySettings(settings: AppSettings) {
-  const isDark = settings.theme === "dark"
-    || (settings.theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  document.documentElement.dataset.theme = isDark ? "dark" : "light";
-  document.documentElement.dataset.density = settings.density;
-  document.documentElement.dataset.reduceMotion = String(settings.reduceMotion);
-}
-
-function saveSettings(settings: AppSettings) {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  localStorage.setItem("routine-sound", settings.sounds ? "on" : "off");
-  applySettings(settings);
-  window.dispatchEvent(new CustomEvent<AppSettings>(SETTINGS_EVENT, { detail: settings }));
-}
 
 function getSound(name: string) {
   const cached = audioCache.get(name);
@@ -511,6 +467,13 @@ function Settings() {
                 <strong>{theme.title}</strong><small>{theme.description}</small>
               </button>)}
             </div>
+          </div>
+          <div className="setting-row">
+            <div>
+              <h3>MTV 90s mode</h3>
+              <p>Switch the whole app to a bold retro palette with neon accents and punchy contrast.</p>
+            </div>
+            <Toggle label="MTV 90s mode" checked={settings.mtv90sTheme} onChange={(value) => update("mtv90sTheme", value)} />
           </div>
           <div className="setting-row">
             <div><h3>Display density</h3><p>Adjust the spacing between cards and controls.</p></div>
