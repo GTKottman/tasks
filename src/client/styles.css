@@ -86,7 +86,7 @@ input { min-width:0; border:1px solid var(--line); border-radius:.55rem; padding
 .selected-row { border-color:var(--sage); background:#dfe9e2; }
 .editor { display:grid; gap:1rem; }
 .editor-help { max-width:62ch; margin:.35rem 0 0; color:var(--soft); font-size:.82rem; }
-.form-grid { display:grid; grid-template-columns:2fr 1.5fr repeat(3,1fr); gap:.75rem; }
+.form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:.75rem; }
 .optional-setting { display:flex; align-items:flex-start; gap:.75rem; padding:1rem; border:1px solid var(--line); border-radius:.8rem; background:color-mix(in srgb,var(--sage) 7%,var(--card)); cursor:pointer; }
 .optional-setting input { width:1.15rem; height:1.15rem; flex:0 0 auto; margin:.15rem 0 0; }
 .optional-setting span { display:grid; gap:.2rem; }
