@@ -104,7 +104,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
     } catch (reason) { setError((reason as Error).message); }
   }
   return <main className="login"><form className="card login-card" onSubmit={submit}>
-    <p className="eyebrow">A gentle rhythm for</p><h1>Daily Routines</h1>
+    <p className="eyebrow">Routine system</p><h1>Daily Routines</h1>
     <label>Email<input name="email" type="email" autoComplete="username" required /></label>
     <label>Password<input name="password" type="password" autoComplete="current-password" required /></label>
     {error && <p className="error" role="alert">{error}</p>}<button>Sign in</button>
@@ -210,12 +210,12 @@ function Dashboard() {
     groupedRoutines.set(routine.category, group);
   }
   return <main>
-    <header><div><p className="eyebrow">A gentle rhythm for</p><h1>Daily Routines</h1></div><nav><Link to="/manage">Edit routines</Link><Link to="/settings">Settings</Link><button className="pill" onClick={() => { const settings = readSettings(); saveSettings({ ...settings, sounds: !sound }); }}>{sound ? "Sounds on" : "Sounds off"}</button></nav></header>
-    <div className="date-row"><label>Day<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label><button className="pill" onClick={() => setDate(localToday())}>Today</button></div>
+    <header><div><p className="eyebrow">Daily command view</p><h1>Daily Routines</h1></div><nav><Link to="/manage">Manage routines</Link><Link to="/settings">System settings</Link><button className="pill" onClick={() => { const settings = readSettings(); saveSettings({ ...settings, sounds: !sound }); }}>{sound ? "Audio on" : "Audio off"}</button></nav></header>
+    <div className="date-row"><label>Date<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label><button className="pill" onClick={() => setDate(localToday())}>Today</button></div>
     {error && <p className="error" role="alert">{error}</p>}
     <div className="dashboard">
       <section className="routines" aria-label={`Routines for ${date}`}>
-        {routines.length === 0 && <div className="card empty">Nothing scheduled. Take a gentle pause.</div>}
+        {routines.length === 0 && <div className="card empty">No routines are scheduled for this date.</div>}
         {[...groupedRoutines.entries()].map(([category, categoryRoutines]) => {
           const categoryCollapsed = collapsedCategories.has(category);
           return <section className="routine-category" key={category}>
@@ -230,11 +230,11 @@ function Dashboard() {
                 <div className="routine-heading">
                   <h2>{routine.routineName}</h2>
                   {routine.isOptional && <span className="optional-badge">Optional</span>}
-                  <span>{routine.isOptional ? `Any day · ${routine.startTime} to ${routine.endTime}` : routine.scheduled ? `${routine.startTime} to ${routine.endTime}` : `Off day · ${routine.startTime} to ${routine.endTime}`}</span>
+                  <span>{routine.isOptional ? `Any day | ${routine.startTime} to ${routine.endTime}` : routine.scheduled ? `${routine.startTime} to ${routine.endTime}` : `Off day | ${routine.startTime} to ${routine.endTime}`}</span>
                   <button type="button" aria-label={`${routineCollapsed ? "Expand" : "Collapse"} ${routine.routineName}`} aria-expanded={!routineCollapsed} onClick={() => toggleRoutineCollapse(routine.routineId)}><Chevron expanded={!routineCollapsed} /></button>
                 </div>
                 {!routineCollapsed && <div className="sections">{sections.map(([title, items]) => <section className="section" key={title}><h3>{title}</h3>
-                  {dailyItemHierarchy(items).map(({ item, depth, parentLabel }) => <label className={`check ${depth ? "nested" : ""}`} style={{ "--nest-depth": depth } as CSSProperties} key={item.id}><input type="checkbox" checked={item.completed} disabled={!routine.scheduled} onChange={() => routine.scheduled && void toggle(item)} /><span className="check-copy"><span>{item.label}</span>{parentLabel && <small>Under: {parentLabel}</small>}</span></label>)}
+                  {dailyItemHierarchy(items).map(({ item, depth, parentLabel }) => <label className={`check ${depth ? "nested" : ""}`} style={{ "--nest-depth": depth } as CSSProperties} key={item.id}><input type="checkbox" checked={item.completed} disabled={!routine.scheduled} onChange={() => routine.scheduled && void toggle(item)} /><span className="check-copy"><span>{item.label}</span>{parentLabel && <small>Parent: {parentLabel}</small>}</span></label>)}
                 </section>)}</div>}
               </article>;
             })}</div>}
@@ -388,13 +388,13 @@ function Manage() {
     if (!confirm("Archive this routine? Existing daily history will remain available.")) return;
     await api(`/api/routines/${id}`, { method: "DELETE", body: JSON.stringify({ confirm: true, clientDate: localToday() }) }); await load(); setDraft(blankRoutine());
   };
-  return <main><header><div><p className="eyebrow">Shape your days</p><h1>Edit routines</h1></div><nav><Link to="/">Dashboard</Link><Link to="/settings">Settings</Link></nav></header>
+  return <main><header><div><p className="eyebrow">Structure editor</p><h1>Manage routines</h1></div><nav><Link to="/">Dashboard</Link><Link to="/settings">System settings</Link></nav></header>
     <div className="manage-layout"><aside className="card routine-list"><button onClick={() => setDraft(blankRoutine())}>+ New routine</button>{routines.map((routine) => <button className={draft.id === routine.id ? "selected-row" : ""} key={routine.id} onClick={() => setDraft(structuredClone(routine))}>{routine.name}{routine.isOptional ? " (optional)" : ""}{routine.archivedAt ? " (archived)" : ""}</button>)}</aside>
-      <form className="card editor" onSubmit={save}><div><h2>{draft.id ? "Edit routine" : "New routine"}</h2><p className="editor-help">Drag the three-line handles to rearrange sections and tasks. On touch screens, press and hold the handle first.</p></div>
+      <form className="card editor" onSubmit={save}><div><h2>{draft.id ? "Edit routine" : "New routine"}</h2><p className="editor-help">Use the three-line handles to reorder sections and tasks. On touch devices, press and hold before moving.</p></div>
         <div className="form-grid"><label>Name<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} required /></label><label>Category<input value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} required /></label><label>Start<input type="time" value={draft.startTime} onChange={(e) => setDraft({ ...draft, startTime: e.target.value })} required /></label><label>End<input type="time" value={draft.endTime} onChange={(e) => setDraft({ ...draft, endTime: e.target.value })} required /></label><label>Display order<input type="number" min="0" value={draft.sortOrder} onChange={(e) => setDraft({ ...draft, sortOrder: Number(e.target.value) })} required /></label></div>
-        <label className="optional-setting"><input type="checkbox" checked={draft.isOptional} onChange={(e) => setDraft({ ...draft, isOptional: e.target.checked })} /><span><strong>Optional routine</strong><small>Keep this routine available every day without affecting your completion score.</small></span></label>
+        <label className="optional-setting"><input type="checkbox" checked={draft.isOptional} onChange={(e) => setDraft({ ...draft, isOptional: e.target.checked })} /><span><strong>Optional routine</strong><small>Optional routines are always available and do not count in daily scoring.</small></span></label>
         <fieldset className={draft.isOptional ? "schedule-disabled" : ""} disabled={draft.isOptional}><legend>Scheduled days</legend>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => <label className="day" key={day}><input type="checkbox" checked={draft.weekdays.includes(index)} onChange={() => setDraft({ ...draft, weekdays: draft.weekdays.includes(index) ? draft.weekdays.filter((value) => value !== index) : [...draft.weekdays, index] })} />{day}</label>)}</fieldset>
-        {draft.isOptional && <p className="schedule-note">Optional routines are available every day, so scheduled days do not apply.</p>}
+        {draft.isOptional && <p className="schedule-note">Scheduled days are disabled because this routine is optional.</p>}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={dropSection}>
           <SortableContext items={draft.sections.map((section) => section.editorId)} strategy={verticalListSortingStrategy}>
             {draft.sections.map((section, sectionIndex) => <SortableEditorRow id={section.editorId} label={`Drag to reorder ${section.title || "section"}`} className="section-sortable" key={section.editorId}>{(sectionHandle) =>
@@ -443,13 +443,13 @@ function Settings() {
   };
 
   const themes: Array<{ value: ThemePreference; title: string; description: string }> = [
-    { value: "system", title: "System", description: "Match this device" },
-    { value: "light", title: "Light", description: "Warm and bright" },
-    { value: "dark", title: "Dark", description: "Soft on the eyes" },
+    { value: "system", title: "System", description: "Follow device contrast mode" },
+    { value: "light", title: "Light", description: "White background with black text" },
+    { value: "dark", title: "Dark", description: "Black background with white text" },
   ];
 
   return <main className="settings-page">
-    <header><div><p className="eyebrow">Make it yours</p><h1>Settings</h1><p className="settings-intro">Tune Daily Routines to feel right for you. Changes are saved automatically on this device.</p></div><nav><Link to="/">Dashboard</Link><Link to="/manage">Edit routines</Link></nav></header>
+    <header><div><p className="eyebrow">System controls</p><h1>Settings</h1><p className="settings-intro">All settings are saved instantly on this browser profile.</p></div><nav><Link to="/">Dashboard</Link><Link to="/manage">Manage routines</Link></nav></header>
     <div className="settings-layout">
       <aside className="settings-nav" aria-label="Settings sections">
         <a href="#appearance">Appearance</a>
@@ -458,9 +458,9 @@ function Settings() {
       </aside>
       <div className="settings-content">
         <section className="settings-section" id="appearance">
-          <div className="settings-section-heading"><div className="settings-icon" aria-hidden="true">◐</div><div><h2>Appearance</h2><p>Choose how your routines look and feel.</p></div></div>
+          <div className="settings-section-heading"><div className="settings-icon" aria-hidden="true">A</div><div><h2>Appearance</h2><p>Configure the monochrome interface layout.</p></div></div>
           <div className="setting-block">
-            <div><h3>Color theme</h3><p>Select a theme or follow your device setting.</p></div>
+            <div><h3>Display mode</h3><p>Choose how black and white contrast is applied.</p></div>
             <div className="theme-options">
               {themes.map((theme) => <button type="button" className={`theme-option ${settings.theme === theme.value ? "selected" : ""}`} aria-pressed={settings.theme === theme.value} key={theme.value} onClick={() => update("theme", theme.value)}>
                 <span className={`theme-preview ${theme.value}`}><i /><i /><i /></span>
@@ -470,13 +470,13 @@ function Settings() {
           </div>
           <div className="setting-row">
             <div>
-              <h3>MTV 90s mode</h3>
-              <p>Switch the whole app to a bold retro palette with neon accents and punchy contrast.</p>
+              <h3>Alternate block profile</h3>
+              <p>Switch to an alternate layout profile while keeping the same monochrome palette.</p>
             </div>
-            <Toggle label="MTV 90s mode" checked={settings.mtv90sTheme} onChange={(value) => update("mtv90sTheme", value)} />
+            <Toggle label="Alternate block profile" checked={settings.mtv90sTheme} onChange={(value) => update("mtv90sTheme", value)} />
           </div>
           <div className="setting-row">
-            <div><h3>Display density</h3><p>Adjust the spacing between cards and controls.</p></div>
+            <div><h3>Display density</h3><p>Adjust spacing between interface blocks.</p></div>
             <div className="segmented" aria-label="Display density">
               {(["comfortable", "compact"] as DensityPreference[]).map((density) => <button type="button" className={settings.density === density ? "selected" : ""} aria-pressed={settings.density === density} key={density} onClick={() => update("density", density)}>{density[0].toUpperCase() + density.slice(1)}</button>)}
             </div>
@@ -484,18 +484,18 @@ function Settings() {
         </section>
 
         <section className="settings-section" id="preferences">
-          <div className="settings-section-heading"><div className="settings-icon" aria-hidden="true">◎</div><div><h2>Preferences</h2><p>Control feedback and movement across the app.</p></div></div>
-          <div className="setting-row"><div><h3>Completion sounds</h3><p>Play gentle feedback when you check off tasks and routines.</p></div><Toggle label="Completion sounds" checked={settings.sounds} onChange={(value) => update("sounds", value)} /></div>
-          <div className="setting-row"><div><h3>Reduce motion</h3><p>Turn off pulsing indicators and interface animations.</p></div><Toggle label="Reduce motion" checked={settings.reduceMotion} onChange={(value) => update("reduceMotion", value)} /></div>
+          <div className="settings-section-heading"><div className="settings-icon" aria-hidden="true">P</div><div><h2>Preferences</h2><p>Control interaction feedback and motion.</p></div></div>
+          <div className="setting-row"><div><h3>Completion sounds</h3><p>Play audio feedback when tasks or routines are completed.</p></div><Toggle label="Completion sounds" checked={settings.sounds} onChange={(value) => update("sounds", value)} /></div>
+          <div className="setting-row"><div><h3>Reduce motion</h3><p>Disable interface animation effects.</p></div><Toggle label="Reduce motion" checked={settings.reduceMotion} onChange={(value) => update("reduceMotion", value)} /></div>
         </section>
 
         <section className="settings-section about-section" id="about">
-          <div className="settings-section-heading"><div className="settings-icon" aria-hidden="true">♡</div><div><h2>About</h2><p>Daily Routines helps you build a gentler rhythm, one small check at a time.</p></div></div>
-          <div className="setting-row"><div><h3>Settings storage</h3><p>Your preferences stay private in this browser.</p></div><span className="status-chip">Stored locally</span></div>
+          <div className="settings-section-heading"><div className="settings-icon" aria-hidden="true">I</div><div><h2>About</h2><p>Daily Routines organizes recurring tasks by day, section, and completion state.</p></div></div>
+          <div className="setting-row"><div><h3>Settings storage</h3><p>Your preferences remain in local browser storage.</p></div><span className="status-chip">Local storage</span></div>
         </section>
       </div>
     </div>
-    <div className={`save-toast ${saved ? "visible" : ""}`} role="status" aria-live="polite">Settings saved</div>
+    <div className={`save-toast ${saved ? "visible" : ""}`} role="status" aria-live="polite">Saved</div>
   </main>;
 }
 
